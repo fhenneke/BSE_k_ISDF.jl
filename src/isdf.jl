@@ -18,7 +18,7 @@ function ISDF(prob::BSEProblem, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
 end
 
 function find_r_μ(N_unit::Int, N_μ::Int)
-    r_μ_indices = Int.(round.(linspace(1, N_unit + 1, N_μ + 1)[1:(end - 1)]))
+    r_μ_indices = Int.(round.(range(1, stop = N_unit + 1, length = N_μ + 1)[1:(end - 1)]))
     return r_μ_indices
 end
 
@@ -29,7 +29,7 @@ function assemble_ζ(u_i, r_μ_indices)
     P_ii = abs2.(P_i)
     A = P_ii[:, :]
     B = P_ii[r_μ_indices, :]
-    ζ = (qrfact(B', Val{true}) \ A')'
+    ζ = Matrix((qr(B', Val(true)) \ A')')
     return ζ
 end
 
@@ -43,7 +43,7 @@ function assemble_ζ(u_i, u_j, r_μ_indices)
     P_ij = P_j .* conj(P_i)
     A = P_ij[:, :]
     B = P_ij[r_μ_indices, :]
-    ζ = (qrfact(B', Val{true}) \ A')'
+    ζ = Matrix((qr(B', Val(true)) \ A')')
     return ζ
 end
 

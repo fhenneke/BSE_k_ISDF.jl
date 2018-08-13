@@ -39,7 +39,8 @@ function lanczos_eig(H, d, N_iter)
     α, β, U = lanczos(H, d, I, N_iter)
 
     T̂ = SymTridiagonal(vcat(α, α[(end - 1):-1:1]), vcat(β, β[(end - 2):-1:1]))
-    ev_lanczos, ef_lanczos = eig(T̂)
+    F = eigen(T̂)
+    ev_lanczos, ef_lanczos = F.values, F.vectors
     return ev_lanczos, ef_lanczos
 end
 
@@ -92,7 +93,8 @@ end
 
 function optical_absorption(prob::BSEProblem, g, Erange)
     H = assemble_exact_H(prob)
-    ev, ef = eig(Hermitian(H))
+    F = eigen(Hermitian(H))
+    ev, ef = F.values, F.vectors
 
     absorption = optical_absorption(ev, ef, prob.u_v, prob.u_c, prob.E_v, prob.E_c, prob.prob.r_unit, prob.prob.k_bz, g, Erange)
 

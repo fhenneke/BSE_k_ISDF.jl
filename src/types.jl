@@ -22,10 +22,10 @@ struct BSEProblem
     N_k::Int
     E_v::Array{Float64, 2}
     E_c::Array{Float64, 2}
-    u_v::Array{Complex128, 3}
-    u_c::Array{Complex128, 3}
-    v_hat::Array{Complex128, 2}
-    w_hat::Array{Complex128, 3}
+    u_v::Array{Complex{Float64}, 3}
+    u_c::Array{Complex{Float64}, 3}
+    v_hat::Array{Complex{Float64}, 2}
+    w_hat::Array{Complex{Float64}, 3}
 end
 
 struct ISDF

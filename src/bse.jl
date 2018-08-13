@@ -1,5 +1,5 @@
 # BSE Hamiltonian
-using LinearMaps
+using FFTW, LinearMaps
 
 function BSEProblem(sp_prob::SPProblem, N_core, N_v, N_c, V, W)
     sp_sol = solve(sp_prob)
@@ -361,7 +361,7 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
     ζ_cc_hat_shift = circshift(ζ_cc_hat, (1, 0))
     ζ_vv_hat_shift = circshift(ζ_vv_hat, (1, 0))
 
-    k_bz_shifted = linspace(0.0, k_bz[end] - k_bz[1], N_k)
+    k_bz_shifted = range(0.0, stop = k_bz[end] - k_bz[1], length = N_k)
 
     W_tilde_shifted = complex(zeros(N_k, N_μ, N_ν))
 
@@ -373,7 +373,7 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
     end
 
     # W_tilde = cat(1, W_tilde_shifted[2:end, :, :], zeros(1, N_μ, N_ν), conj.(W_tilde_shifted[end:-1:1, :, :]))
-    W_tilde = cat(1, W_tilde_shifted[1:end, :, :], zeros(1, N_μ, N_ν), conj.(W_tilde_shifted[end:-1:2, :, :]))
+    W_tilde = cat(W_tilde_shifted[1:end, :, :], zeros(1, N_μ, N_ν), conj.(W_tilde_shifted[end:-1:2, :, :]); dims = 1)
 
     return W_tilde
 end
@@ -483,18 +483,18 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
 
     copy!(ap, indices, a, indices)
 
-    A_mul_B!(cp, p, ap)
-    A_mul_B!(w_hat, p, w)
+    mul!(cp, p, ap)
+    mul!(w_hat, p, w)
     cp .*= (1 / length(w)) .* w_hat
 
-    A_mul_B!(bp, p_back, cp)
+    mul!(bp, p_back, cp)
 
     copy!(b, indices, bp, indices)
 
     return b
 end
 function w_conv!(b, w, a)
-    return BSE_ISDF.w_conv!(b, w, a, zeros(w), zeros(w), zeros(w), zeros(w), plan_fft(zeros(w)), plan_bfft(zeros(w)))
+    return BSE_k_ISDF.w_conv!(b, w, a, zeros(w), zeros(w), zeros(w), zeros(w), plan_fft(zeros(w)), plan_bfft(zeros(w)))
 end
 function w_conv(w, a)
     return w_conv!(similar(a), w, a)
@@ -531,7 +531,7 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
 
     X[:] .= x
     @views for jk in 1:N_k
-        A_mul_B!(B[:, :, jk], u_v_vc_conj[:, :, jk], X[:, :, jk])
+        mul!(B[:, :, jk], u_v_vc_conj[:, :, jk], X[:, :, jk])
     end
     for jr in 1:N_μ
         C[jr] = 0.0
@@ -541,7 +541,7 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
             end
         end
     end
-    A_mul_B!(D, V_tilde, C)
+    mul!(D, V_tilde, C)
     for ik in 1:N_k
         for ic in 1:N_c
             for iv in 1:N_v
@@ -565,17 +565,17 @@ function W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
 
     X[:] .= x
     @views for jk in 1:N_k
-        A_mul_B!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
-        A_mul_Bt!(C[jk, :, :], u_c_cc[:, :, jk], B[:, :, jk])
+        mul!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
+        mul!(C[jk, :, :], u_c_cc[:, :, jk], transpose(B[:, :, jk]))
     end
     C_padded[1:N_k, :, :] .= C
-    A_mul_B!(C_transformed, P, C_padded)
+    mul!(C_transformed, P, C_padded)
     C_transformed .*= W_tilde_hat
-    A_mul_B!(D_large, P_inv, C_transformed)
+    mul!(D_large, P_inv, C_transformed)
     D_small .= @view D_large[1:N_k, :, :]
     @views for ik in 1:N_k
-        At_mul_B!(E[:, :, ik], D_small[ik, :, :], conj.(u_c_cc[:, :, ik]))
-        Ac_mul_B!(F[:, :, ik], u_v_vv_conj[:, :, ik], E[:, :, ik])
+        mul!(E[:, :, ik], transpose(D_small[ik, :, :]), conj.(u_c_cc[:, :, ik]))
+        mul!(F[:, :, ik], adjoint(u_v_vv_conj[:, :, ik]), E[:, :, ik])
     end
 
     return copy(vec(F))
@@ -591,8 +591,8 @@ function W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
 
     X[:] .= x
     @views for jk in 1:N_k
-        A_mul_B!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
-        A_mul_Bt!(C[jk, :, :], u_c_cc[:, :, jk], B[:, :, jk])
+        mul!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
+        mul!(C[jk, :, :], u_c_cc[:, :, jk], transpose(B[:, :, jk]))
     end
     for iμ in 1:N_μ
         for iν in 1:N_ν
@@ -603,8 +603,8 @@ function W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
         end
     end
     @views for ik in 1:N_k
-        At_mul_B!(E[:, :, ik], D[ik, :, :], conj.(u_c_cc[:, :, ik]))
-        Ac_mul_B!(F[:, :, ik], u_v_vv_conj[:, :, ik], E[:, :, ik])
+        mul!(E[:, :, ik], transpose(D[ik, :, :]), conj.(u_c_cc[:, :, ik]))
+        mul!(F[:, :, ik], adjoint(u_v_vv_conj[:, :, ik]), E[:, :, ik])
     end
 
     return copy(vec(F))
@@ -621,17 +621,17 @@ function W_times_vector_fast!(y, x, W_tilde_hat, u_v_vv_conj, u_c_cc, u_c_cc_con
 
     for jk in 1:N_k
         X[:] .= @view(x[(N_v * N_c * (jk - 1) + 1):(N_v * N_c * jk)])
-        A_mul_B!(B, u_v_vv_conj[jk], X)
-        A_mul_Bt!(C, u_c_cc[jk], B)
+        mul!(B, u_v_vv_conj[jk], X)
+        mul!(C, u_c_cc[jk], transpose(B))
         C_padded[jk, :, :] .= C
     end
-    A_mul_B!(C_transformed, P, C_padded)
+    mul!(C_transformed, P, C_padded)
     C_transformed .*= (1 / (2 * N_k)) .* W_tilde_hat
-    A_mul_B!(D_large, P_back, C_transformed)
+    mul!(D_large, P_back, C_transformed)
     for ik in 1:N_k
         D .= @view(D_large[mod1(ik - 1, 2 * N_k), :, :])
-        At_mul_B!(E, D, u_c_cc_conj[ik])
-        Ac_mul_B!(F, u_v_vv_conj[ik], E)
+        mul!(E, transpose(D), u_c_cc_conj[ik])
+        mul!(F, adjoint(u_v_vv_conj[ik]), E)
         y[(N_v * N_c * (ik - 1) + 1):(N_v * N_c * ik)] .= @view(F[:])
     end
 
@@ -643,7 +643,7 @@ function setup_H(prob, isdf)
     N_μ_vv, N_μ_cc, N_μ_vc = isdf.N_μ_vv, isdf.N_μ_cc, isdf.N_μ_vc
     E_v, E_c = prob.E_v, prob.E_c
 
-    D = spdiagm(vec([E_c[ic, ik] - E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]))
+    D = spdiagm(0 => vec([E_c[ic, ik] - E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]))
 
     V_tilde, V_workspace = setup_V(prob, isdf)
     W_tilde, W_workspace = setup_W(prob, isdf)

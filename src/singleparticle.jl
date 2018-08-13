@@ -1,9 +1,10 @@
 # single particle problem
+using LinearAlgebra, SparseArrays
 
 function SPProblem(V_sp, l, N_unit, N_k)
-    r_unit = linspace(0, l, N_unit + 1)[1:(end-1)]
-    r_super = linspace(-div(N_k, 2) * l, div(N_k + 1, 2) * l, N_unit * N_k + 1)[1:(end-1)]
-    k_bz = linspace(-pi / l, pi / l, N_k + 1)[1:(end - 1)]
+    r_unit = range(0, stop = l, length = N_unit + 1)[1:(end-1)]
+    r_super = range(-div(N_k, 2) * l, stop = div(N_k + 1, 2) * l, length = N_unit * N_k + 1)[1:(end-1)]
+    k_bz = range(-pi / l, stop = pi / l, length = N_k + 1)[1:(end - 1)]
 
     return SPProblem(V_sp, l, r_unit, r_super, k_bz)
 end
@@ -24,7 +25,7 @@ function modified_momentum_operator(r, k) # with periodic boundary conditions
     N = length(r) - 1
 
     Δr_inv = 1 ./ vcat(diff(r))
-    nabla = spdiagm((-Δr_inv, Δr_inv[1:(end - 1)]), (0, 1))
+    nabla = spdiagm(0 => -Δr_inv, 1 => Δr_inv[1:(end - 1)])
     nabla[end, 1] = Δr_inv[end]
     return -im * nabla + k * I
 end
@@ -34,7 +35,7 @@ function modified_momentum_operator(r, l, k) # with periodic boundary conditions
 end
 
 function potential_energy(r, V_fun)
-    V = spdiagm(V_fun.(r))
+    V = spdiagm(0 => V_fun.(r))
     return V
 end
 
@@ -58,10 +59,10 @@ function solve(prob::SPProblem)
     ev = []
     ef = []
     for k in k_bz
-        H_k = Hermitian(full(single_particle_hamiltonian(r, l, k, V_sp)))
-        sol = eig(H_k)
-        push!(ev, sol[1])
-        push!(ef, sol[2])
+        H_k = Hermitian(Matrix(single_particle_hamiltonian(r, l, k, V_sp)))
+        sol = eigen(H_k)
+        push!(ev, sol.values)
+        push!(ef, sol.vectors)
     end
 
     return SPSolution(prob, ev, ef)
