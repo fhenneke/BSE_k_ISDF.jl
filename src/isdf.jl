@@ -29,7 +29,7 @@ function assemble_ζ(u_i, r_μ_indices)
     P_ii = abs2.(P_i)
     A = P_ii[:, :]
     B = P_ii[r_μ_indices, :]
-    ζ = Matrix((qr(B', Val(true)) \ A')')
+    ζ = copy((qr(B', Val(true)) \ A')')
     return ζ
 end
 
@@ -43,7 +43,7 @@ function assemble_ζ(u_i, u_j, r_μ_indices)
     P_ij = P_j .* conj(P_i)
     A = P_ij[:, :]
     B = P_ij[r_μ_indices, :]
-    ζ = Matrix((qr(B', Val(true)) \ A')')
+    ζ = copy((qr(B', Val(true)) \ A')')
     return ζ
 end
 
