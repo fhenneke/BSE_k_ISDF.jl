@@ -15,15 +15,15 @@ version = "0.4.0"
 
 [[BinaryProvider]]
 deps = ["Libdl", "Pkg", "SHA", "Test"]
-git-tree-sha1 = "2883bc1b389e3d57a134796c39c788db3f298cef"
+git-tree-sha1 = "ffbf89cc49b073cffdb91381b7ee60557a03ec96"
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.4.0"
+version = "0.4.1"
 
 [[CodecZlib]]
-deps = ["BinaryProvider", "Compat", "Libdl", "Test", "TranscodingStreams"]
-git-tree-sha1 = "82742ef572290f566c6fc6d977d87586a0d3d5f1"
+deps = ["BinaryProvider", "Libdl", "Pkg", "Test", "TranscodingStreams"]
+git-tree-sha1 = "83cb3d65c37ea1364c2d5bf7bcea41843ba645dc"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
-version = "0.4.3"
+version = "0.5.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random", "Test"]
@@ -51,9 +51,9 @@ version = "1.0.1"
 
 [[Contour]]
 deps = ["LinearAlgebra", "StaticArrays", "Test"]
-git-tree-sha1 = "4e244ce551b993b721a6dbbd040b5f3d7cba0f48"
+git-tree-sha1 = "b974e164358fea753ef853ce7bad97afec15bb80"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
-version = "0.5.0"
+version = "0.5.1"
 
 [[DataStructures]]
 deps = ["InteractiveUtils", "REPL", "Random", "Serialization", "Test"]
@@ -141,6 +141,12 @@ version = "2.1.0"
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[MacroTools]]
+deps = ["Compat"]
+git-tree-sha1 = "c443e1c8d58a4e9f61b708ad0a88286c7042145b"
+uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+version = "0.4.4"
+
 [[Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
@@ -197,6 +203,18 @@ version = "0.19.1"
 [[Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[PyCall]]
+deps = ["Compat", "Conda", "MacroTools", "VersionParsing"]
+git-tree-sha1 = "dcb6e67213f812d75100cbf87e9c0fd6aebc01f5"
+uuid = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+version = "1.17.1"
+
+[[PyPlot]]
+deps = ["Colors", "Compat", "LaTeXStrings", "PyCall", "Test", "VersionParsing"]
+git-tree-sha1 = "3a0908224526b378cb0eb1b770385e23b70adb5c"
+uuid = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+version = "2.6.0"
 
 [[REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets"]
