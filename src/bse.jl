@@ -231,34 +231,7 @@ function assemble_exact_H(prob)
 
     H_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
     for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
-        H_reshaped[iv, ic, ik, jv, jc, jk] =
-            H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
-    end
-    H = reshape(H_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
-    for i in 1:(N_v * N_c * N_k)
-        H[i, i] = real(H[i, i])
-    end
-
-    return H
-end
-
-function assemble_exact_H2(prob) # uses symmetry, not tested yet
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    k_bz = prob.prob.k_bz
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-    E_v = prob.E_v
-    E_c = prob.E_c
-    u_v = prob.u_v
-    u_c = prob.u_c
-    v_hat = prob.v_hat
-    w_hat = prob.w_hat
-
-    H_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
-        if N_v * N_c * (ik - 1) + N_v * (ic - 1) + iv <= N_v * N_c * (jk - 1) + N_v * (jc - 1) + jv
+        if N_v * N_c * (ik - 1) + N_v * (ic - 1) + iv <= N_v * N_c * (jk - 1) + N_v * (jc - 1) + jv # exploit symmetry
             H_reshaped[iv, ic, ik, jv, jc, jk] =
                 H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
         end
