@@ -4,8 +4,8 @@ function lanczos(A, u_init, M, k)
     α = zeros(k)
     β = zeros(k)
     u = copy(u_init)
-    u_old = zeros(u)
-    v_old = zeros(u)
+    u_old = zero(u)
+    v_old = zero(u)
     U = zeros(eltype(u), length(u), k + 1)
     U[:, 1] .= u
 
@@ -71,7 +71,7 @@ function lanczos_optical_absorption(prob::BSEProblem, isdf::ISDF, N_iter, g, Era
     d = optical_absorption_vector(prob)
     ev_lanczos, ef_lanczos = lanczos_eig(H, d, N_iter)
 
-    absorption = zeros(Erange)
+    absorption = zeros(length(Erange))
     for j in 1:(2 * N_iter - 1)
         absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
     end
@@ -83,7 +83,7 @@ end
 function lanczos_optical_absorption(H, d, N_iter, g, Erange)
     ev_lanczos, ef_lanczos = lanczos_eig(H, d, N_iter)
 
-    optical_absorption = zeros(Erange)
+    optical_absorption = zeros(length(Erange))
     for j in 1:(2 * N_iter - 1)
         optical_absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
     end
@@ -110,7 +110,7 @@ function optical_absorption(ev, ef, u_v, u_c, E_v, E_c, r_unit, k_bz, g, Erange)
     d = optical_absorption_vector(u_v, u_c, E_v, E_c, r_unit, k_bz)
     osc = [abs2(dot(d, ef[:, n])) for n in 1:(N_v * N_c * N_k)]
 
-    absorption = zeros(Erange)
+    absorption = zeros(length(Erange))
     for j in 1:(N_v * N_c * N_k)
         absorption .+= osc[j] * g.(Erange .- ev[j])
     end
