@@ -377,7 +377,7 @@ function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_r_1, N_r_2, N_r_3, N
     W_tilde = complex(zeros(N_q, N_μ, N_ν))
 
     for iq in 1:N_q
-        G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_r_1, N_r_2, N_r_3), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq], 1))
+        G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_r_1, N_r_2, N_r_3), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
         W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) *
             ζ_cc_hat[G_shift_indices, :]' * w_hat[q_2bz_ind[iq]][1] * ζ_vv_hat[G_shift_indices, :]
     end
@@ -452,9 +452,9 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     size(bp) == sw || throw(ArgumentError("size of b buffer needs to equal the size of w"))
     size(w_hat) == sw || throw(ArgumentError("size of w_hat buffer needs to equal the size of w"))
 
-    indices = CartesianRange(CartesianIndex(ones(Int, dim)...), CartesianIndex(sa))
+    indices = CartesianIndices(sa)
 
-    copy!(ap, indices, a, indices)
+    copyto!(ap, indices, a, indices)
 
     mul!(cp, p, ap)
     mul!(w_hat, p, w)
@@ -462,7 +462,7 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
 
     mul!(bp, p_back, cp)
 
-    copy!(b, indices, bp, indices)
+    copyto!(b, indices, bp, indices)
 
     return b
 end
@@ -480,9 +480,9 @@ function w_conv_reference!(b, w, a)
 
     all(sa .<= sw) || throw(ArgumentError("size of w needs to be larger than the size of a"))
 
-    for i in CartesianRange(CartesianIndex(ones(Int, dim)...), CartesianIndex(sa))
+    for i in CartesianIndices(sa)
         b[i] = zero(eltype(b))
-        for j in CartesianRange(CartesianIndex(ones(Int, dim)...), CartesianIndex(sa))
+        for j in CartesianIndices(sa)
             b[i] += w[CartesianIndex(mod1.((i - j).I .+ 1, sw))] * a[j]
         end
     end

@@ -59,7 +59,7 @@ function isdf_error_estimate(u_i, ζ, r_μ_indices, N_k_samples)
     ik_samples = rand(1:N_k, N_k_samples)
     M_sample_reshaped = [u_i[ir, jj, jk] * conj(u_i[ir, ii, ik]) for ir in 1:N_unit, ii in 1:N_i, ik in ik_samples, jj in 1:N_i, jk in ik_samples]
     M_sample = reshape(M_sample_reshaped, N_unit, (N_i * N_k_samples)^2)
-    vecnorm(M_sample - ζ * M_sample[r_μ_indices, :]) / vecnorm(M_sample)
+    norm(M_sample - ζ * M_sample[r_μ_indices, :]) / norm(M_sample)
 end
 
 function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
@@ -68,7 +68,7 @@ function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
     ik_samples = rand(1:N_k, N_k_samples)
     M_sample_reshaped = [u_c[ir, ic, ik] * conj(u_v[ir, iv, ik]) for ir in 1:N_unit, iv in 1:N_v, ic in 1:N_c, ik in ik_samples]
     M_sample = reshape(M_sample_reshaped, N_unit, N_v * N_c * N_k_samples)
-    vecnorm(M_sample - ζ * M_sample[r_μ_indices, :]) / vecnorm(M_sample)
+    norm(M_sample - ζ * M_sample[r_μ_indices, :]) / norm(M_sample)
 end
 
 function assemble_M(prob::BSEProblem)
