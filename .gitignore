@@ -1,3 +1,8 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+
+results/
+
+experiments.jl
+3d_experiments.jl
