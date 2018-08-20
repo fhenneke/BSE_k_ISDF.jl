@@ -123,8 +123,7 @@ end
 
 p_errors_optical_absorption = plot(
     title = "error in optical absorption spectrum", xlabel = L"M_{tol}",
-    xscale = :log10, yscale = :log10)#,
-    # xlims = (M_tol_vec[end], M_tol_vec[1]), ylims = (5e-3, 1))
+    xscale = :log10, yscale = :log10)
 plot!(p_errors_optical_absorption, M_tol_vec, errors_optical_absorption, label = "")
 
 savefig("results_" * example_string * "/errors_optical_absorption.pdf")
@@ -132,6 +131,6 @@ savefig("results_" * example_string * "/errors_optical_absorption.pdf")
 plot_indices = [1, 2, 3]#, 4, 5]
 p_optical_absorption_M_tol = plot(title = "optical absorption spectrum", xlabel = "E")
 plot!(p_optical_absorption_M_tol, Erange, optical_absorption_ref, lw = 3, label = "reference spectrum")
-plot!(p_optical_absorption_M_tol, Erange, optical_absorption_lanc_M_tol[plot_indices], lw = 2, label = "approximate spectrum for " .* L"M_{tol} = " .* string.(transpose(M_tol_vec[plot_indices])))
+plot!(p_optical_absorption_M_tol, Erange, optical_absorption_lanc[plot_indices], lw = 2, label = "approximate spectrum for " .* L"M_{tol} = " .* string.(transpose(M_tol_vec[plot_indices])))
 
 savefig("results_" * example_string * "/optical_absorption_spectrum.pdf")
