@@ -69,44 +69,40 @@ savefig("results_" * example_string * "/errors_H.pdf")
 
 # %% plot optical absorption spectrum
 
-# N_k_vec = 2 .^(4:10)
-# N_unit = 128
-# N_iter = 200
-#
-# Erange = load("results/optical_absorption_lanczos_$(N_unit)_$(N_k_vec[1])_$(N_iter).jld2", "Erange")
-# optical_absorption_lanc = []
-# optical_absorption_lanc = [load("results/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "optical_absorption_lanc") for N_k in N_k_vec]
-#
-#
-#
-# optical_absorption = load("results/optical_absorption_ref_128_128_500.jld2", "optical_absorption_lanc")
-#
-# errors_optical_absorption = []
-# for i in 1:length(N_k_vec)
-#     push!(errors_optical_absorption, norm(optical_absorption_lanc[i] - optical_absorption, 1) / norm(optical_absorption, 1))
-# end
-#
-# errors_optical_absorption_M_tol = []
-# for i in 1:length(M_tol_vec)
-#     push!(errors_optical_absorption_M_tol, norm(optical_absorption_lanc_M_tol[i] - optical_absorption, 1) / norm(optical_absorption, 1))
-# end
-#
-# p_errors_optical_absorption = plot(title = "error in optical absorption spectrum", xlabel = L"N_k", xlims = (N_k_vec[1], N_k_vec[end]), ylims = (5e-3, 1), xscale = :log10, yscale = :log10)
-# plot!(p_errors_optical_absorption, N_k_vec, errors_optical_absorption, label = "")
-#
-# savefig("results/errors_optical_absorption.pdf")
-#
-# plot_indices = [1, 3, 5]
-# p_optical_absorption = plot(title = "optical absorption spectrum", xlabel = "E")
-# plot!(p_optical_absorption, Erange, optical_absorption, lw = 3, label = "reference spectrum")
-# plot!(p_optical_absorption, Erange, optical_absorption_lanc[plot_indices], lw = 2, label = "approximate spectrum for " .* L"N_k = " .* string.(transpose(N_k_vec[plot_indices])))
-#
-# savefig("results/optical_absorption_spectrum.pdf")
+N_unit = 128
+N_k_vec = 2 .^(4:10)
+N_iter = 200
+N_unit_ref = 128
+N_k_ref = 4096
+N_iter_ref = 200
+
+optical_absorption_lanc = []
+optical_absorption_lanc = [load("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "optical_absorption_lanc") for N_k in N_k_vec]
+
+Erange, optical_absorption_ref = load("results_" * example_string * "/optical_absorption_lanc_ref_$(N_unit_ref)_$(N_k_ref)_$(N_iter_ref).jld2", "Erange", "optical_absorption_lanc")
+
+errors_optical_absorption = []
+for i in 1:length(N_k_vec)
+    push!(errors_optical_absorption, norm(optical_absorption_lanc[i] - optical_absorption_ref, 1) / norm(optical_absorption_ref, 1))
+end
+
+p_errors_optical_absorption_k = plot(title = "error in optical absorption spectrum", xlabel = L"N_k", xlims = (N_k_vec[1], N_k_vec[end]), ylims = (5e-3, 1), xscale = :log10, yscale = :log10)
+plot!(p_errors_optical_absorption_k, N_k_vec, errors_optical_absorption, label = "")
+
+savefig("results_" * example_string * "/errors_optical_absorption_k.pdf")
+
+plot_indices = [1, 3, 5]
+p_optical_absorption = plot(title = "optical absorption spectrum", xlabel = "E")
+plot!(p_optical_absorption, Erange, optical_absorption_ref, lw = 3, label = "reference spectrum")
+plot!(p_optical_absorption, Erange, optical_absorption_lanc[plot_indices], lw = 2, label = "approximate spectrum for " .* L"N_k = " .* string.(transpose(N_k_vec[plot_indices])))
+
+savefig("results_" * example_string * "/optical_absorption_spectrum_k.pdf")
 
 # %% plot error for different N_μ
 N_k = 128
 N_unit = 128
 N_iter = 200
+N_k_ref = 128
 N_unit_ref = 128
 N_iter_ref = 200
 
@@ -114,7 +110,7 @@ N_iter_ref = 200
 M_tol_vec = [0.8, 0.5, 0.25, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
 optical_absorption_lanc = [load("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter)_$(M_tol).jld2", "optical_absorption_lanc") for M_tol in M_tol_vec]
 
-Erange, optical_absorption_ref = load("results_" * example_string * "/optical_absorption_lanc_ref_$(N_unit_ref)_$(N_k)_$(N_iter_ref).jld2", "Erange", "optical_absorption_lanc")
+Erange, optical_absorption_ref = load("results_" * example_string * "/optical_absorption_lanc_ref_$(N_unit_ref)_$(N_k_ref)_$(N_iter_ref).jld2", "Erange", "optical_absorption_lanc")
 
 errors_optical_absorption = []
 for i in 1:length(M_tol_vec)

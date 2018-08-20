@@ -95,7 +95,7 @@ sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
 prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
 
 # compute reference Hamiltonian
-t_H_entry = @benchmark BSE_k_ISDF.H_entry_fast($prob.v_hat, $prob.w_hat, 4, 1, 15, 3, 1, 60, $prob.E_v, $prob.E_c, $prob.u_v, $prob.u_c, $prob.prob.r_super, $prob.prob.r_unit, $prob.prob.k_bz)
+t_H_entry = @benchmark BSE_k_ISDF.H_entry_fast($prob.v_hat, $prob.w_hat, 1, 1, 15, 1, 1, 60, $prob.E_v, $prob.E_c, $prob.u_v, $prob.u_c, $prob.prob.r_super, $prob.prob.r_unit, $prob.prob.k_bz)
 
 println("estimated time to assemble H_exact is ", mean(t_H_entry).time * (N_v * N_c * N_k)^2 / 2 * 1e-9, " seconds")
 
@@ -176,42 +176,42 @@ save("results_" * example_string * "/optical_absorption_lanc_ref_$(N_unit)_$(N_k
 
 # %% compute absorption spectra for different k
 
-# # fixed parameters
-# N_unit = 128
-#
-# N_core = 0
-# N_v = 4
-# N_c = 5
-#
-# N_μ_cc = 22
-# N_μ_vv = 16
-# N_μ_vc = 21
-#
-# # broadening
-# σ = 0.1
-# g = (ω, σ) -> 1 / π * σ / (ω^2 + σ^2)
-# # energy range
-# E_min, E_max = 2.0, 20.0
-# Erange = E_min:0.01:E_max
-# # parameter for lanczos
-# N_iter = 200
-#
-# #variable parameters
-# N_k_vec = 2 .^(4:10)
-#
-# for N_k in N_k_vec
-#     sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
-#     prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
-#
-#     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
-#
-#     H = BSE_k_ISDF.setup_H(prob, isdf)
-#
-#     optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, N_iter, ω -> g(ω, σ), Erange)
-#
-#     # save results
-#     save("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
-# end
+# fixed parameters
+N_unit = 128
+
+N_core = 0
+N_v = 4
+N_c = 5
+
+N_μ_cc = 22
+N_μ_vv = 16
+N_μ_vc = 21
+
+# broadening
+σ = 0.1
+g = (ω, σ) -> 1 / π * σ / (ω^2 + σ^2)
+# energy range
+E_min, E_max = 2.0, 20.0
+Erange = E_min:0.01:E_max
+# parameter for lanczos
+N_iter = 200
+
+#variable parameters
+N_k_vec = 2 .^(4:10)
+
+for N_k in N_k_vec
+    sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
+    prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
+
+    isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
+
+    H = BSE_k_ISDF.setup_H(prob, isdf)
+
+    optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, N_iter, ω -> g(ω, σ), Erange)
+
+    # save results
+    save("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+end
 
 # %% compute absorption spectra for different N_μ
 
