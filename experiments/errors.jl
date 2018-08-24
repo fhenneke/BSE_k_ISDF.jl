@@ -20,9 +20,15 @@ using BSE_k_ISDF
 # example_string = "ex1"
 # l = 3.0
 # V_sp = r -> -100 * exp(-(r - 0.3 * l)^2 / (2 * (0.05 * l)^2)) - 60 * exp(-(r - 0.6 * l)^2 / (2 * (0.05 * l)^2))
+
 example_string = "ex2"
 l = 1.5
 V_sp = r -> 20 * cos(4π / l * r) + 0.2 * sin(2π / l * r)
+
+# example_string = "ex3"
+# l = 1.0
+# V_sp = r -> 100.0 * cos(4π / l * r) + 10.0 * sin(2π / l * r)
+
 V = (r_1, r_2) -> 1 /  sqrt((r_1 - r_2)^2 + 0.01)
 W = (r_1, r_2, l, L) -> 0.0625 * (3.0 + sin(2π / l * r_1)) * (3.0 + cos(4π / l * r_2)) *
     exp(-abs(BSE_k_ISDF.supercell_difference(r_1, r_2, L))^2 / (2 * (4 * l)^2)) * V(BSE_k_ISDF.supercell_difference(r_1, r_2, L), 0.)
@@ -37,12 +43,12 @@ N_unit = 128
 N_core = 0
 N_v = 4
 N_c = 5
-N_k = 128
+N_k = 256
 
 # variable parameters
-N_μ_vv_vec = 1:50
-N_μ_cc_vec = 1:50
-N_μ_vc_vec = 1:50
+N_μ_vv_vec = 1:40
+N_μ_cc_vec = 1:40
+N_μ_vc_vec = 1:40
 
 # set up problem
 sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
@@ -86,7 +92,11 @@ N_unit = 128
 N_core = 0
 N_v = 4
 N_c = 5
-N_k = 128
+N_k = 256
+# N_core = 3
+# N_v = 1
+# N_c = 1
+# N_k = 4096
 
 # set up problem
 sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
@@ -96,6 +106,7 @@ prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
 t_H_entry = @benchmark BSE_k_ISDF.H_entry_fast($prob.v_hat, $prob.w_hat, 1, 1, 15, 1, 1, 60, $prob.E_v, $prob.E_c, $prob.u_v, $prob.u_c, $prob.prob.r_super, $prob.prob.r_unit, $prob.prob.k_bz)
 
 println("estimated time to assemble H_exact is ", mean(t_H_entry).time * (N_v * N_c * N_k)^2 / 2 * 1e-9, " seconds")
+sleep(1) # to make sure the estimated time is printed
 
 @time H_exact = BSE_k_ISDF.assemble_exact_H(prob)
 @time F = eigen(H_exact)
@@ -147,13 +158,17 @@ N_unit = 128
 N_core = 0
 N_v = 4
 N_c = 5
-N_k = 128
+N_k = 256
+# N_core = 3
+# N_v = 1
+# N_c = 1
+# N_k = 4096
 
 # broadening
 σ = 0.1
 g = (ω, σ) -> 1 / π * σ / (ω^2 + σ^2)
 # energy range
-E_min, E_max = 2.0, 20.0
+E_min, E_max = 0.0, 20.0
 Erange = E_min:0.01:E_max
 # parameter for lanczos
 N_iter = 200
@@ -165,7 +180,6 @@ prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
 H_exact, ev, ef = load("results_" * example_string * "/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", "ev", "ef")
 
 optical_absorption = BSE_k_ISDF.optical_absorption(ev, ef, prob.u_v, prob.u_c, prob.E_v, prob.E_c, prob.prob.r_unit, prob.prob.k_bz, ω -> g(ω, σ), Erange)
-
 d = BSE_k_ISDF.optical_absorption_vector(prob)
 optical_absorption_lanc = 8 * π^2 / l * BSE_k_ISDF.lanczos_optical_absorption(H_exact, d, N_iter, ω -> g(ω, σ), Erange)
 
@@ -189,7 +203,7 @@ N_μ_vc = 21
 σ = 0.1
 g = (ω, σ) -> 1 / π * σ / (ω^2 + σ^2)
 # energy range
-E_min, E_max = 2.0, 20.0
+E_min, E_max = 0.0, 20.0
 Erange = E_min:0.01:E_max
 # parameter for lanczos
 N_iter = 200
@@ -222,7 +236,7 @@ N_unit = 128
 N_core = 0
 N_v = 4
 N_c = 5
-N_k = 128
+N_k = 256
 
 sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
 prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
@@ -233,7 +247,7 @@ N_μ_cc_vec, N_μ_vv_vec, N_μ_vc_vec, errors_M_cc, errors_M_vv, errors_M_vc =  
 σ = 0.1
 g = (ω, σ) -> 1 / π * σ / (ω^2 + σ^2)
 # energy range
-E_min, E_max = 2.0, 20.0
+E_min, E_max = 0.0, 20.0
 Erange = E_min:0.01:E_max
 # parameter for lanczos
 N_iter = 200
