@@ -50,8 +50,6 @@ prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
 
 u_v, u_c = prob.u_v, prob.u_c
 
-M_vv, M_cc, M_vc = BSE_k_ISDF.assemble_M(prob)
-
 errors_M_vv = []
 errors_M_cc = []
 errors_M_vc = []
@@ -59,21 +57,21 @@ errors_M_vc = []
 @time for N_μ_vv in N_μ_vv_vec
     r_μ_vv_indices = BSE_k_ISDF.find_r_μ(N_unit, N_μ_vv)
     ζ_vv = BSE_k_ISDF.assemble_ζ(u_v, r_μ_vv_indices)
-    error_M_vv = norm(M_vv - ζ_vv * M_vv[r_μ_vv_indices, :]) / norm(M_vv)
+    error_M_vv = BSE_k_ISDF.isdf_error(u_v, ζ_vv, r_μ_vv_indices)
 
     push!(errors_M_vv, error_M_vv)
 end
 @time for N_μ_cc in N_μ_cc_vec
     r_μ_cc_indices = BSE_k_ISDF.find_r_μ(N_unit, N_μ_cc)
     ζ_cc = BSE_k_ISDF.assemble_ζ(u_c, r_μ_cc_indices)
-    error_M_cc = norm(M_cc - ζ_cc * M_cc[r_μ_cc_indices, :]) / norm(M_cc)
+    error_M_cc = BSE_k_ISDF.isdf_error(u_c, ζ_cc, r_μ_cc_indices)
 
     push!(errors_M_cc, error_M_cc)
 end
 @time for N_μ_vc in N_μ_vc_vec
     r_μ_vc_indices = BSE_k_ISDF.find_r_μ(N_unit, N_μ_vc)
     ζ_vc = BSE_k_ISDF.assemble_ζ(u_v, u_c, r_μ_vc_indices)
-    error_M_vc = norm(M_vc - ζ_vc * M_vc[r_μ_vc_indices, :]) / norm(M_vc)
+    error_M_vc = BSE_k_ISDF.isdf_error(u_v, u_c, ζ_vc, r_μ_vc_indices)
 
     push!(errors_M_vc, error_M_vc)
 end
