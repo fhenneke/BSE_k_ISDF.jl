@@ -46,6 +46,26 @@ plot!(N_k_vec, 1e-1 * N_k_vec, ls = :dash, labels = L"O(N_k)")
 
 savefig("results_" * example_string * "/timings_k.pdf")
 
+# %% plot benchmark results for different N_μ
+
+N_unit = 128
+N_k = 256
+
+M_tol_vec = [0.8, 0.5, 0.25, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
+
+results = [load("results_" * example_string * "/benchmark_$(N_unit)_$(N_k)_$(M_tol).jld2") for M_tol in M_tol_vec]
+timings = ["t_isdf", "t_H_setup", "t_H_x"]
+
+setup_times = sum(1e-6 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
+evaluation_times = 1e-6 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
+
+plot(title = "run time scaling", xlabel = L"M_{tol}", ylabel = "time [ms]")
+plot!(M_tol_vec, setup_times, m = :circ, labels = "initial setup", xscale = :log10, yscale = :log10)
+plot!(M_tol_vec, evaluation_times, m = :square, labels = "matrix vector product")
+# plot!(M_tol_vec, 1e1 * M_tol_vec .^ (-1 / 5), ls = :dash, labels = L"O(M_tol)")
+
+savefig("results_" * example_string * "/timings_M_tol.pdf")
+
 # %% plot error
 
 # %% plotting of error in M
