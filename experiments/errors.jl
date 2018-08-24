@@ -2,7 +2,7 @@
 
 # %%
 # loading packages
-using BenchmarkTools, JLD2, FileIO, LinearAlgebra, FFTW, Statistics
+using BenchmarkTools, JLD2, FileIO, LinearAlgebra, FFTW, Statistics, Arpack
 # using Plots, LaTeXStrings
 # pyplot()
 # theme(:dark)
@@ -208,9 +208,12 @@ for N_k in N_k_vec
     H = BSE_k_ISDF.setup_H(prob, isdf)
 
     optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, N_iter, ω -> g(ω, σ), Erange)
+    ev, ef = eigs(H, which=:SR, nev = 1, maxiter=1000)
 
     # save results
     save("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+
+    save("results_" * example_string * "/eigs_$(N_unit)_$(N_k).jld2", "ev", ev, "ef", ef)
 end
 
 # %% compute absorption spectra for different N_μ
@@ -251,6 +254,10 @@ for M_tol in M_tol_vec
 
     optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, N_iter, ω -> g(ω, σ), Erange)
 
+    ev, ef = eigs(H, which=:SR, nev = 1, maxiter=1000)
+
     # save results
     save("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter)_$(M_tol).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+
+    save("results_" * example_string * "/eigs_$(N_unit)_$(N_k)_$(M_tol).jld2", "ev", ev, "ef", ef)
 end
