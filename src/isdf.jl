@@ -47,6 +47,48 @@ function assemble_ζ(u_i, u_j, r_μ_indices)
     return ζ
 end
 
+function isdf_error(prob, isdf)
+    error_M_vv = isdf_error(prob.u_v, isdf.ζ_vv, isdf.r_μ_vv_indices)
+    error_M_cc = isdf_error(prob.u_c, isdf.ζ_cc, isdf.r_μ_cc_indices)
+    error_M_vc = isdf_error(prob.u_v, prob.u_c, isdf.ζ_vc, isdf.r_μ_vc_indices, N_k_samples)
+    return error_M_vv, error_M_cc, error_M_vc
+end
+
+"""
+should be equivalent to
+
+    M_i = assemble_M(u_i)
+    norm(M_i - ζ * M_i[r_μ_indices, :]) / norm(M_i)
+"""
+function isdf_error(u_i, ζ, r_μ_indices)
+    N_unit, N_i, N_k = size(u_i)
+    error2 = 0.0
+    normalization2 = 0.0
+    col = zeros(Complex{Float64}, N_unit)
+    for ii in 1:N_i, ik in 1:N_k, jj in 1:N_i, jk in 1:N_k
+        @views col[:] .= u_i[:, jj, jk] .* conj.(u_i[:, ii, ik])
+        normalization2 += norm(col)^2
+        error2 += norm(col - ζ * col[r_μ_indices])^2
+    end
+
+    return sqrt(error2 / normalization2)
+end
+
+function isdf_error(u_v, u_c, ζ, r_μ_indices)
+    N_unit, N_c, N_k = size(u_c)
+    N_unit, N_v, N_k = size(u_v)
+    error2 = 0.0
+    normalization2 = 0.0
+    col = zeros(Complex{Float64}, N_unit)
+    for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k
+        @views col[:] .= u_c[:, ic, ik] .* conj.(u_v[:, iv, ik])
+        normalization2 += norm(col)^2
+        error2 += norm(col - ζ * col[r_μ_indices])^2
+    end
+
+    return sqrt(error2 / normalization2)
+end
+
 function estimate_error(prob, isdf, N_k_samples = 20)
     error_M_vv = isdf_error_estimate(prob.u_v, isdf.ζ_vv, isdf.r_μ_vv_indices, N_k_samples)
     error_M_cc = isdf_error_estimate(prob.u_c, isdf.ζ_cc, isdf.r_μ_cc_indices, N_k_samples)
