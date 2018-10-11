@@ -47,13 +47,14 @@ N_k_vec = 2 .^(4:12)
 results = [load("results_" * example_string * "/benchmark_$(N_unit)_$(N_k).jld2") for N_k in N_k_vec]
 timings = ["t_isdf", "t_H_setup", "t_H_x"]
 
-setup_times = sum(1e-6 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
-evaluation_times = 1e-6 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
+setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
+evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
 
-plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [ms]")
+plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
 plot!(N_k_vec, setup_times, m = :circ, labels = "initial setup", xscale = :log2, yscale = :log10)
 plot!(N_k_vec, evaluation_times, m = :square, labels = "matrix vector product")
-plot!(N_k_vec, 1e-1 * N_k_vec, ls = :dash, labels = L"O(N_k)")
+# plot!(N_k_vec, (0.5 * 80 * 1e-6 * 20^2) * N_k_vec.^2, ls = :dash, labels = "entrywise assembly of Hamiltonian")
+plot!(N_k_vec, 1e-4 * N_k_vec, ls = :dash, labels = L"O(N_k)")
 
 savefig("results_" * example_string * "/timings_k.pdf")
 
