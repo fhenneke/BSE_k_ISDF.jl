@@ -89,6 +89,8 @@ for M_tol in M_tol_vec
     N_μ_cc = findfirst(errors_M_cc .<= M_tol)
     N_μ_vc = findfirst(errors_M_vc .<= M_tol)
 
+    t_H_entry = @benchmark BSE_k_ISDF.H_entry_fast($prob.v_hat, $prob.w_hat, 1, 3, 15, 2, 3, 60, $prob.E_v, $prob.E_c, $prob.u_v, $prob.u_c, $prob.prob.r_super, $prob.prob.r_unit, $prob.prob.k_bz)
+
     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
     t_isdf = @benchmark BSE_k_ISDF.ISDF($prob, $N_μ_vv, $N_μ_cc, $N_μ_vc)
 
@@ -99,5 +101,5 @@ for M_tol in M_tol_vec
     H * x
     t_H_x = @benchmark $H * $x
 
-    save("results_" * example_string * "/benchmark_$(N_unit)_$(N_k)_$(M_tol).jld2", "t_isdf", t_isdf, "t_H_setup", t_H_setup, "t_H_x", t_H_x)
+    save("results_" * example_string * "/benchmark_$(N_unit)_$(N_k)_$(M_tol).jld2", "t_isdf", t_isdf, "t_H_setup", t_H_setup, "t_H_x", t_H_x, "t_H_entry", t_H_entry)
 end
