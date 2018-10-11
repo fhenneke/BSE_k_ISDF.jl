@@ -1,20 +1,24 @@
 # ISDF
 
+function ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, u_v, u_c)
+    ζ_vv = assemble_ζ(u_v, r_μ_vv_indices)
+    ζ_cc = assemble_ζ(u_c, r_μ_cc_indices)
+    ζ_vc = assemble_ζ(u_v, u_c, r_μ_vc_indices)
+
+    return ISDF(length(r_μ_vv_indices), length(r_μ_cc_indices), length(r_μ_vc_indices),
+        r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices,
+        u_v[r_μ_vv_indices, :, :], u_c[r_μ_cc_indices, :, :],
+        u_v[r_μ_vc_indices, :, :], u_c[r_μ_vc_indices, :, :],
+        ζ_vv, ζ_cc, ζ_vc)
+end
+
 function ISDF(prob::BSEProblem1D, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
     N_unit = length(prob.prob.r_unit)
     r_μ_vv_indices = find_r_μ(N_unit, N_μ_vv)
     r_μ_cc_indices = find_r_μ(N_unit, N_μ_cc)
     r_μ_vc_indices = find_r_μ(N_unit, N_μ_vc)
 
-    ζ_vv = assemble_ζ(prob.u_v, r_μ_vv_indices)
-    ζ_cc = assemble_ζ(prob.u_c, r_μ_cc_indices)
-    ζ_vc = assemble_ζ(prob.u_v, prob.u_c, r_μ_vc_indices)
-
-    return ISDF(N_μ_vv, N_μ_cc, N_μ_vc,
-        r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices,
-        prob.u_v[r_μ_vv_indices, :, :], prob.u_c[r_μ_cc_indices, :, :],
-        prob.u_v[r_μ_vc_indices, :, :], prob.u_c[r_μ_vc_indices, :, :],
-        ζ_vv, ζ_cc, ζ_vc)
+    return ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, prob.u_v, prob.u_c)
 end
 
 function find_r_μ(N_unit::Int, N_μ::Int)

@@ -220,6 +220,11 @@ function find_r_μ(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
     return r_μ_indices
 end
 
+function ISDF(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
+    r_μ_indices = find_r_μ(prob, N_μ_mt, N_μ_irs)
+
+    return ISDF(r_μ_indices, r_μ_indices, r_μ_indices, prob.u_v, prob.u_c)
+end
 
 """
 input: 2d array of k points (size (d, N_k))
