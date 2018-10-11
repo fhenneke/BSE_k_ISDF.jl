@@ -1,12 +1,12 @@
 # BSE Hamiltonian
 using FFTW, LinearMaps
 
-function BSEProblem(sp_prob::SPProblem, N_core, N_v, N_c, V, W)
+function BSEProblem1D(sp_prob::SPProblem1D, N_core, N_v, N_c, V, W)
     sp_sol = solve(sp_prob)
-    return BSEProblem(sp_sol, N_core, N_v, N_c, V, W)
+    return BSEProblem1D(sp_sol, N_core, N_v, N_c, V, W)
 end
 
-function BSEProblem(sp_sol::SPSolution, N_core, N_v, N_c, V, W)
+function BSEProblem1D(sp_sol::SPSolution1D, N_core, N_v, N_c, V, W)
     sp_prob = sp_sol.prob
     l = sp_prob.l
     N_unit = length(sp_prob.r_unit)
@@ -21,7 +21,7 @@ function BSEProblem(sp_sol::SPSolution, N_core, N_v, N_c, V, W)
     v_hat = compute_hat_Gq(V, sp_prob.r_super, sp_prob.r_unit)
     w_hat = compute_hat_GGq(W, sp_prob.r_super, sp_prob.r_unit)
 
-    return BSEProblem(sp_prob, N_core, N_v, N_c, N_k, E_v, E_c, u_v, u_c, v_hat, w_hat)
+    return BSEProblem1D(sp_prob, N_core, N_v, N_c, N_k, E_v, E_c, u_v, u_c, v_hat, w_hat)
 end
 
 function compute_hat_Gq(V, r_super, r_unit)

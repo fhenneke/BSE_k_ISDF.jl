@@ -1,12 +1,12 @@
 # single particle problem
 using LinearAlgebra, SparseArrays
 
-function SPProblem(V_sp, l, N_unit, N_k)
+function SPProblem1D(V_sp, l, N_unit, N_k)
     r_unit = range(0, stop = l, length = N_unit + 1)[1:(end-1)]
     r_super = range(-div(N_k, 2) * l, stop = div(N_k + 1, 2) * l, length = N_unit * N_k + 1)[1:(end-1)]
     k_bz = range(-pi / l, stop = pi / l, length = N_k + 1)[1:(end - 1)]
 
-    return SPProblem(V_sp, l, r_unit, r_super, k_bz)
+    return SPProblem1D(V_sp, l, r_unit, r_super, k_bz)
 end
 
 """
@@ -50,7 +50,7 @@ end
 """
 solve single particle problem
 """
-function solve(prob::SPProblem)
+function solve(prob::SPProblem1D)
     V_sp = prob.V_sp
     l = prob.l
     r = prob.r_unit

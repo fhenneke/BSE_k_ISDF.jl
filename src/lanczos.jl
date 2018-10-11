@@ -44,7 +44,7 @@ function lanczos_eig(H, d, N_iter)
     return ev_lanczos, ef_lanczos
 end
 
-function optical_absorption_vector(prob::BSEProblem)
+function optical_absorption_vector(prob::BSEProblem1D)
     return optical_absorption_vector(prob.u_v, prob.u_c, prob.E_v, prob.E_c, prob.prob.r_unit, prob.prob.k_bz)
 end
 
@@ -91,7 +91,7 @@ function lanczos_optical_absorption(H, d, N_iter, g, Erange)
     return optical_absorption
 end
 
-function optical_absorption(prob::BSEProblem, g, Erange)
+function optical_absorption(prob::BSEProblem1D, g, Erange)
     H = assemble_exact_H(prob)
     F = eigen(Hermitian(H))
     ev, ef = F.values, F.vectors

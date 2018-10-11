@@ -49,8 +49,8 @@ N_k_vec = 2 .^(4:12)
 # benchmark loop
 
 for N_k in N_k_vec
-    sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
-    prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
+    sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
+    prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V, W)
 
     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
     t_isdf = @benchmark BSE_k_ISDF.ISDF($prob, $N_μ_vv, $N_μ_cc, $N_μ_vc)
@@ -75,8 +75,8 @@ N_v = 4
 N_c = 5
 N_k = 256
 
-sp_prob = BSE_k_ISDF.SPProblem(V_sp, l, N_unit, N_k)
-prob = BSE_k_ISDF.BSEProblem(sp_prob, N_core, N_v, N_c, V, W)
+sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
+prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V, W)
 
 N_μ_cc_vec, N_μ_vv_vec, N_μ_vc_vec, errors_M_cc, errors_M_vv, errors_M_vc =  load("results_" * example_string * "/errors_M_$(N_unit)_$(N_k).jld2", "N_μ_cc_vec", "N_μ_vv_vec", "N_μ_vc_vec", "errors_M_cc", "errors_M_vv", "errors_M_vc")
 

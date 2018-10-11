@@ -1,6 +1,6 @@
 # ISDF
 
-function ISDF(prob::BSEProblem, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
+function ISDF(prob::BSEProblem1D, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
     N_unit = length(prob.prob.r_unit)
     r_μ_vv_indices = find_r_μ(N_unit, N_μ_vv)
     r_μ_cc_indices = find_r_μ(N_unit, N_μ_cc)
