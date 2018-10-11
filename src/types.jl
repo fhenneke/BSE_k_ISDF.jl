@@ -1,6 +1,6 @@
 # types for problems and solutions, mainly containers
 
-abstract type SPProblem
+abstract type SPProblem end
 
 struct SPProblem1D <: SPProblem
     V_sp::Function
@@ -10,13 +10,13 @@ struct SPProblem1D <: SPProblem
     k_bz::Vector{Float64}
 end
 
-struct SPSolution
+struct SPSolution1D
     prob
     ev
     ef
 end
 
-abstract type BSEProblem
+abstract type BSEProblem end
 
 struct BSEProblem1D <: BSEProblem
     prob::SPProblem1D
