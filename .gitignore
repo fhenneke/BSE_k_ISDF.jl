@@ -7,3 +7,5 @@ results_*/
 
 experiments.jl
 3d_experiments.jl
+
+.vscode/
