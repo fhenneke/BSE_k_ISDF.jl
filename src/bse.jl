@@ -510,6 +510,18 @@ function w_conv_reference(w, a)
     return w_conv_reference!(b, w, a)
 end
 
+function fftfreq(n1, n2, n3)
+    f1 = vcat(collect(0:(div(n1, 2) - (1 - n1 % 2))), collect(-div(n1, 2):-1))
+    f2 = vcat(collect(0:(div(n2, 2) - (1 - n2 % 2))), collect(-div(n2, 2):-1))
+    f3 = vcat(collect(0:(div(n3, 2) - (1 - n3 % 2))), collect(-div(n3, 2):-1))
+
+    F1 = kron(ones(n3), ones(n2), f1)
+    F2 = kron(ones(n3), f2, ones(n1))
+    F3 = kron(f3, ones(n2), ones(n1))
+
+    return vcat(F1', F2', F3')
+end
+
 # matrix free V
 function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     N_μ = size(V_tilde, 1)
