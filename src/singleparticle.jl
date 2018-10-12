@@ -65,5 +65,5 @@ function solve(prob::SPProblem1D)
         push!(ef, sol.vectors)
     end
 
-    return SPSolution(prob, ev, ef)
+    return SPSolution1D(prob, ev, ef)
 end
