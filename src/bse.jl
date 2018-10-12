@@ -263,7 +263,17 @@ end
 ###############################################################################
 
 # methods for setting up the matrix free Hamiltonian
-function setup_V(prob, isdf)
+function setup_D(prob)
+    E_v, E_c = prob.E_v, prob.E_c
+    N_v = size(E_v, 1)
+    N_c = size(E_c, 1)
+    N_k = size(E_c, 2)
+
+    D = spdiagm(0 => vec([E_c[ic, ik] - E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]))
+    return D
+end
+
+function setup_V(prob::BSEProblem1D, isdf)
     v_hat = prob.v_hat
     r_super = prob.prob.r_super
     r_unit = prob.prob.r_unit
@@ -275,7 +285,40 @@ function setup_V(prob, isdf)
 
     V_tilde = assemble_V_tilde(v_hat[:, 1], ζ_vc, r_super, r_unit)
     V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
-    return V_tilde, V_workspace
+
+    u_v_vc_conj = conj.(isdf.u_v_vc)
+    u_c_vc = isdf.u_c_vc
+
+    V = LinearMap{Complex{Float64}}(
+        x -> V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace),
+        N_v * N_c * N_k; ishermitian=true)
+
+    return V
+end
+
+function setup_V(prob::BSEProblemExciting, isdf)
+    N_rs = prob.N_rs
+    N_v = size(prob.E_v, 1)
+    N_c = size(prob.E_c, 1)
+    N_k = prod(prob.N_ks)
+    Ω0_vol = prob.Ω0_vol
+
+    N_μ = isdf.N_μ_vc
+    ζ_vc = isdf.ζ_vc
+
+    v_hat = 4 * pi * vec(mapslices(x -> norm(x) < 1e-10 ? 0. : 1 / norm(x)^2, fftfreq(N_rs...); dims = 1))
+
+    V_tilde = assemble_V_tilde3d(v_hat, ζ_vc, Ω0_vol, N_rs[1], N_rs[2], N_rs[3], N_k)
+    V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
+
+    u_v_vc_conj = conj.(isdf.u_v_vc)
+    u_c_vc = isdf.u_c_vc
+
+    V = LinearMap{Complex{Float64}}(
+        x -> V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace),
+        N_v * N_c * N_k; ishermitian=true)
+
+    return V
 end
 
 function assemble_V_tilde(v_hat, ζ_vc, r_super, r_unit)
@@ -318,22 +361,66 @@ function create_V_workspace(N_v, N_c, N_k, N_μ)
     return V_workspace
 end
 
-function setup_W(prob, isdf)
+function setup_W(prob::BSEProblem1D, isdf)
     w_hat = prob.w_hat
+
     r_super = prob.prob.r_super
     r_unit = prob.prob.r_unit
     k_bz = prob.prob.k_bz
     N_v = prob.N_v
     N_c = prob.N_c
     N_k = prob.N_k
+
     N_μ = isdf.N_μ_cc
     N_ν = isdf.N_μ_vv
     ζ_vv = isdf.ζ_vv
     ζ_cc = isdf.ζ_cc
+    u_v_vv_conj = conj.(isdf.u_v_vv)
+    u_c_cc = isdf.u_c_cc
+
     W_tilde = assemble_W_tilde(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
     W_workspace = create_W_workspace(N_v, N_c, N_k, N_ν, N_μ)
-    return W_tilde, W_workspace
+    W_tilde_hat = fft(W_tilde, 1)
+
+
+    W = LinearMap{Complex{Float64}}(
+        x -> W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace),
+        N_v * N_c * N_k; ishermitian=true)
+
+    return W
 end
+
+function setup_W(prob::BSEProblemExciting, isdf)
+    w_hat = prob.w_hat
+    q_2bz_ind = prob.q_2bz_ind
+    q_2bz_shift = prob.q_2bz_shift
+
+    N_rs = prob.N_rs
+    N_v = size(prob.E_v, 1)
+    N_c = size(prob.E_c, 1)
+    N_ks = prob.N_ks
+    N_k = prod(N_ks)
+    k_bz = prob.k_bz
+    Ω0_vol = prob.Ω0_vol
+    N_k_diffs = prob.N_k_diffs
+
+    N_μ = isdf.N_μ_cc
+    N_ν = isdf.N_μ_vv
+    ζ_vv = isdf.ζ_vv
+    ζ_cc = isdf.ζ_cc
+    u_v_vv_conj = conj.(isdf.u_v_vv)
+    u_c_cc = isdf.u_c_cc
+
+    W_tilde = assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs[1], N_rs[2], N_rs[3], N_k, q_2bz_ind, q_2bz_shift)
+    W_workspace = create_W_workspace3d(N_v, N_c, N_ks, N_k_diffs, N_μ, N_ν)
+
+    W = LinearMap{Complex{Float64}}(
+        x -> W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace),
+        N_v * N_c * N_k; ishermitian=true)
+
+    return W
+end
+
 
 function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
     N_unit = length(r_unit)
@@ -640,24 +727,8 @@ function W_times_vector_fast!(y, x, W_tilde_hat, u_v_vv_conj, u_c_cc, u_c_cc_con
 end
 
 function setup_H(prob, isdf)
-    N_v, N_c, N_k = prob.N_v, prob.N_c, prob.N_k
-    E_v, E_c = prob.E_v, prob.E_c
-
-    D = spdiagm(0 => vec([E_c[ic, ik] - E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]))
-
-    V_tilde, V_workspace = setup_V(prob, isdf)
-    W_tilde, W_workspace = setup_W(prob, isdf)
-    W_tilde_hat = fft(W_tilde, 1)
-
-    u_v_vv_conj = conj.(isdf.u_v_vv)
-    u_c_cc = isdf.u_c_cc
-    u_v_vc_conj = conj.(isdf.u_v_vc)
-    u_c_vc = isdf.u_c_vc
-
-    H = LinearMap{Complex{Float64}}(
-        x -> D * x +
-            2 * V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace) -
-            W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace),
-        N_v * N_c * N_k; ishermitian=true, isposdef = true)
-    return H
+    D = setup_D(prob)
+    V = setup_V(prob, isdf)
+    W = setup_W(prob, isdf)
+    return D + 2 * V - W
 end
