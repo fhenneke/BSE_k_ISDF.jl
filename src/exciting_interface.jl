@@ -36,7 +36,7 @@ end
 function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
     input_xml = parse_file(path * "/input.xml")
 
-    r_lattice, r_cartesian, a_mat, Ω0_vol, k_bz, b_mat, BZ_vol = BSE_k_ISDF.read_r_points_k_points(N_rs, path)
+    r_lattice, r_cartesian, a_mat, Ω0_vol, k_bz, b_mat, BZ_vol = read_r_points_k_points(N_rs, path)
 
     atoms = []
     for species in root(input_xml)["structure"][1]["species"]
@@ -49,9 +49,9 @@ function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
     end
 
     N_k = size(k_bz, 2)
-    E_v, E_c, u_v, u_c = BSE_k_ISDF.read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path)
+    E_v, E_c, u_v, u_c = read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path)
 
-    N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat = BSE_k_ISDF.read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
+    N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat = read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
 
     return BSEProblemExciting(input_xml, N_rs, r_lattice, r_cartesian, a_mat, Ω0_vol, atoms, N_ks, k_bz, b_mat, BZ_vol, E_v, E_c, u_v, u_c, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat)
 end
@@ -186,9 +186,9 @@ end
 
 function find_r_μ(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
     # uniform grid (interstitial region and muffin tin region)
-    grid_1 = BSE_k_ISDF.find_r_μ(prob.N_rs[1], N_μ_irs[1])
-    grid_2 = BSE_k_ISDF.find_r_μ(prob.N_rs[2], N_μ_irs[2])
-    grid_3 = BSE_k_ISDF.find_r_μ(prob.N_rs[3], N_μ_irs[3])
+    grid_1 = find_r_μ(prob.N_rs[1], N_μ_irs[1])
+    grid_2 = find_r_μ(prob.N_rs[2], N_μ_irs[2])
+    grid_3 = find_r_μ(prob.N_rs[3], N_μ_irs[3])
     r_μ_mask_1 = zeros(prob.N_rs[1])
     r_μ_mask_2 = zeros(prob.N_rs[2])
     r_μ_mask_3 = zeros(prob.N_rs[3])

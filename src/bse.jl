@@ -483,7 +483,7 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     return b
 end
 function w_conv!(b, w, a)
-    return BSE_k_ISDF.w_conv!(b, w, a, zeros(w), zeros(w), zeros(w), zeros(w), plan_fft(zeros(w)), plan_bfft(zeros(w)))
+    return w_conv!(b, w, a, zeros(w), zeros(w), zeros(w), zeros(w), plan_fft(zeros(w)), plan_bfft(zeros(w)))
 end
 function w_conv(w, a)
     return w_conv!(similar(a), w, a)
