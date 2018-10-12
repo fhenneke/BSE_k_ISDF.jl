@@ -641,7 +641,6 @@ end
 
 function setup_H(prob, isdf)
     N_v, N_c, N_k = prob.N_v, prob.N_c, prob.N_k
-    N_μ_vv, N_μ_cc, N_μ_vc = isdf.N_μ_vv, isdf.N_μ_cc, isdf.N_μ_vc
     E_v, E_c = prob.E_v, prob.E_c
 
     D = spdiagm(0 => vec([E_c[ic, ik] - E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]))
