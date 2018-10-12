@@ -4,8 +4,8 @@ module BSE_k_ISDF
 include("types.jl")
 include("isdf.jl")
 include("singleparticle.jl")
+include("exciting_interface.jl")
 include("bse.jl")
 include("lanczos.jl")
-include("exciting_interface.jl")
 
 end # module
