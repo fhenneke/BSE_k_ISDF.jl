@@ -411,7 +411,7 @@ function setup_W(prob::BSEProblemExciting, isdf)
     u_v_vv_conj = conj.(isdf.u_v_vv)
     u_c_cc = isdf.u_c_cc
 
-    W_tilde = assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs[1], N_rs[2], N_rs[3], N_k, q_2bz_ind, q_2bz_shift)
+    W_tilde = assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
     W_workspace = create_W_workspace3d(N_v, N_c, N_ks, N_k_diffs, N_μ, N_ν)
 
     W = LinearMap{Complex{Float64}}(
@@ -458,11 +458,11 @@ function W_tilde_at_q(w_k_hat::AbstractMatrix, ζ_1_hat, ζ_2_hat, l, L)
     return 1 / (l * L) * (ζ_1_hat' * (w_k_hat * ζ_2_hat))
 end
 
-function G_vector_to_index(G, N_r_1, N_r_2, N_r_3)
-    mod1(G[1] + 1, N_r_1) + N_r_1 * (mod1(G[2] + 1, N_r_2) - 1) + N_r_1 * N_r_2 * (mod1(G[3] + 1, N_r_3) - 1)
+function G_vector_to_index(G, N_rs) # TODO: make independent of the dimension
+    mod1(G[1] + 1, N_rs[1]) + N_rs[1] * (mod1(G[2] + 1, N_rs[2]) - 1) + N_rs[1] * N_rs[2] * (mod1(G[3] + 1, N_rs[3]) - 1)
 end
 
-function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_r_1, N_r_2, N_r_3, N_k, q_2bz_ind, q_2bz_shift)
+function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
     N_unit = size(ζ_vv, 1)
     N_ν = size(ζ_vv, 2)
     N_μ = size(ζ_cc, 2)
@@ -470,17 +470,17 @@ function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_r_1, N_r_2, N_r_3, N
 
     ζ_vv_hat = zeros(Complex{Float64}, size(ζ_vv))
     for iμ in 1:size(ζ_vv, 2)
-        ζ_vv_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_vv[:, iμ], N_r_1, N_r_2, N_r_3)))
+        ζ_vv_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_vv[:, iμ], N_rs)))
     end
     ζ_cc_hat = zeros(Complex{Float64}, size(ζ_cc))
     for iμ in 1:size(ζ_cc, 2)
-        ζ_cc_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_cc[:, iμ], N_r_1, N_r_2, N_r_3)))
+        ζ_cc_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_cc[:, iμ], N_rs)))
     end
 
     W_tilde = complex(zeros(N_q, N_μ, N_ν))
 
     for iq in 1:N_q
-        G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_r_1, N_r_2, N_r_3), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
+        G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
         W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) *
             ζ_cc_hat[G_shift_indices, :]' * w_hat[q_2bz_ind[iq]][1] * ζ_vv_hat[G_shift_indices, :]
     end
