@@ -184,6 +184,21 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     return N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat
 end
 
+function read_pmat(N_core, N_v, N_c, N_k, path)
+    pmat = zeros(Complex{Float64}, N_v * N_c * N_k, 3)
+    pmat_reshaped = reshape(pmat, N_v, N_c, N_k, 3)
+
+    file = h5open(path * "/pmat.h5", "r")
+    for ik in 1:N_k
+        pmat_block = permutedims(read(file, "pmat/" * lpad(string(ik), 4, string(0)) * "/pmat/"), [3, 4, 2, 1])
+        pmat_reshaped[:, :, ik, :] = pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 1] +
+                                im * pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 2]
+    end
+    close(file)
+
+    return pmat
+end
+
 function find_r_μ(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
     # uniform grid (interstitial region and muffin tin region)
     grid_1 = find_r_μ(prob.N_rs[1], N_μ_irs[1])
