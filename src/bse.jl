@@ -458,8 +458,16 @@ function W_tilde_at_q(w_k_hat::AbstractMatrix, ζ_1_hat, ζ_2_hat, l, L)
     return 1 / (l * L) * (ζ_1_hat' * (w_k_hat * ζ_2_hat))
 end
 
-function G_vector_to_index(G, N_rs) # TODO: make independent of the dimension
-    mod1(G[1] + 1, N_rs[1]) + N_rs[1] * (mod1(G[2] + 1, N_rs[2]) - 1) + N_rs[1] * N_rs[2] * (mod1(G[3] + 1, N_rs[3]) - 1)
+function G_vector_to_index(G, N_rs) # TODO: make fast for all dimensions
+    if length(G) == 3
+        ind = mod1(G[1] + 1, N_rs[1]) + N_rs[1] * (mod1(G[2] + 1, N_rs[2]) - 1) + N_rs[1] * N_rs[2] * (mod1(G[3] + 1, N_rs[3]) - 1)
+    else
+        ind = mod1(G[1] + 1, N_rs[1])
+        for id in 2:length(G)
+            ind += prod(N_rs[1:(id - 1)]) * (mod1(G[id] + 1, N_rs[id]) - 1)
+        end
+    end
+    return ind
 end
 
 function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
