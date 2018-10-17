@@ -172,14 +172,14 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     end
 
     w_hat = []
+    file = h5open(path * "/bse_output.h5", "r")
     for iq in 1:size(q_bz, 2)
-        wqq = h5open(path * "/bse_output.h5", "r") do file # TODO: rewrite to only open this once
-            read(file, "screenedpotential/" * lpad(string(iq), 4, string(0)) * "/wqq")
-        end
+        wqq = read(file, "screenedpotential/" * lpad(string(iq), 4, string(0)) * "/wqq")
         G_len = size(G_vec[iq], 2)
         wqq_complex = Ω0_vol * (wqq[1, 1:G_len, 1:G_len] + im * wqq[2, 1:G_len, 1:G_len])
         push!(w_hat, (permutedims(wqq_complex, [2, 1]), G_vec[iq]))
     end
+    close(file)
 
     return N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat
 end
