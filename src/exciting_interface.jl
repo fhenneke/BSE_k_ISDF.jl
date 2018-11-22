@@ -80,7 +80,7 @@ function read_r_points_k_points(N_rs, path) # TODO: make into type constructor
         r_cartesian[:, ir] = a_mat * r_lattice[:, ir]
     end
 
-    k_points_out = readdlm(path * "/KPOINTS.OUT")
+    k_points_out = readdlm(path * "/KPOINTS_QMT001.OUT")
 
     k_bz = float.(transpose(k_points_out[2:end, 2:4]))
 
@@ -90,7 +90,7 @@ end
 function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path)
     N_unit = prod(N_rs)
 
-    eigval_out = readdlm(path * "/EIGVAL.OUT")
+    eigval_out = readdlm(path * "/EIGVAL_QMT001.OUT")
 
     N_states = eigval_out[2, 1]
     eigval = zeros(N_states, N_k)
@@ -115,7 +115,7 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
             exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
             exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for iv in 1:N_v
-            c = h5open(path * "/property.h5", "r") do file # TODO: rewrite to only open the file once
+            c = h5open(path * "/realspace_$(N_rs[1]).h5", "r") do file # TODO: rewrite to only open the file once
                 read(file, lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
             end
 
@@ -130,7 +130,7 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
             exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
             exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for ic in 1:N_c
-            c = h5open(path * "/property.h5", "r") do file
+            c = h5open(path * "/realspace_$(N_rs[1]).h5", "r") do file
                 read(file, lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
             end
 
