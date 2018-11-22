@@ -113,6 +113,18 @@ function V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
     return v
 end
 
+function V_entry_3d(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
+    N_unit = prod(N_rs)
+    N_k = prod(N_ks)
+
+    U_vc_1_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
+    U_vc_2_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
+
+    v = 1 / (Ω0_vol * N_k) * U_vc_1_hat' * (v_hat .* U_vc_2_hat)
+
+    return v
+end
+
 function assemble_exact_V(prob)
     r_super = prob.prob.r_super
     r_unit = prob.prob.r_unit
@@ -306,7 +318,7 @@ function setup_V(prob::BSEProblemExciting, isdf)
     N_μ = isdf.N_μ_vc
     ζ_vc = isdf.ζ_vc
 
-    v_hat = 4 * pi * vec(mapslices(x -> norm(x) < 1e-10 ? 0. : 1 / norm(x)^2, fftfreq(N_rs...); dims = 1))
+    v_hat = 4 * pi * vec(mapslices(x -> norm(x) < 1e-10 ? 0.0 : 1 / norm(prob.b_mat * x)^2, fftfreq(N_rs...); dims = 1))
 
     V_tilde = assemble_V_tilde3d(v_hat, ζ_vc, Ω0_vol, N_rs[1], N_rs[2], N_rs[3], N_k)
     V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
