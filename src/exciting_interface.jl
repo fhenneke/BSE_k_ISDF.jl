@@ -111,9 +111,9 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
     u_v = zeros(Complex{Float64}, N_unit, N_v, N_k)
     for ik in 1:N_k
         phase = kron(
-            exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
-            exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
-            exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
+            exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
+            exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
+            exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for iv in 1:N_v
             c = h5open(path * "/realspace_$(N_rs[1]).h5", "r") do file # TODO: rewrite to only open the file once
                 read(file, lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
@@ -126,9 +126,9 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
     u_c = zeros(Complex{Float64}, N_unit, N_c, N_k)
     for ik in 1:N_k
         phase = kron(
-            exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
-            exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
-            exp.(-2 * pi * im * range(-0.5, stop = 0.5, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
+            exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
+            exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
+            exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for ic in 1:N_c
             c = h5open(path * "/realspace_$(N_rs[1]).h5", "r") do file
                 read(file, lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
