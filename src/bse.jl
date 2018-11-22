@@ -179,16 +179,16 @@ function W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, 
     return w
 end
 
-function W_entry_3d(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_r_1, N_r_2, N_r_3, ikkp2iq, q_2bz_ind, q_2bz_shift)
-    N_unit = N_r_1 * N_r_2 * N_r_3
+function W_entry_3d(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
+    N_unit = prod(N_rs)
     N_k = size(ikkp2iq, 1)
 
     iq = ikkp2iq[ik, jk]
 
-    U_c_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_r_1, N_r_2, N_r_3)))
-    U_v_hat = Ω0_vol / N_unit * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_r_1, N_r_2, N_r_3)))
+    U_c_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
+    U_v_hat = Ω0_vol / N_unit * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
 
-    G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_r_1, N_r_2, N_r_3), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
+    G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
     w = 1 / (Ω0_vol^2 * N_k) *
         U_c_hat[G_shift_indices]' * (w_hat[q_2bz_ind[iq]][1] * U_v_hat[G_shift_indices])
 
