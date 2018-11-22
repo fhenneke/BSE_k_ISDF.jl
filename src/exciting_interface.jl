@@ -177,7 +177,7 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
         wqq = read(file, "screenedpotential/" * lpad(string(iq), 4, string(0)) * "/wqq")
         G_len = size(G_vec[iq], 2)
         wqq_complex = Ω0_vol * (wqq[1, 1:G_len, 1:G_len] + im * wqq[2, 1:G_len, 1:G_len])
-        push!(w_hat, (permutedims(wqq_complex, [2, 1]), G_vec[iq])) # TODO: permutedim necessary?
+        push!(w_hat, (wqq_complex, G_vec[iq])) # TODO: permutedim necessary?
     end
     close(file)
 
