@@ -109,15 +109,15 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
 
 
     u_v = zeros(Complex{Float64}, N_unit, N_v, N_k)
+
+    file = h5open(path * "/bse_output.h5", "r")
     for ik in 1:N_k
         phase = kron(
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for iv in 1:N_v
-            c = h5open(path * "/realspace_$(N_rs[1]).h5", "r") do file # TODO: rewrite to only open the file once
-                read(file, lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
-            end
+            c = read(file, lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
 
             u_v[:, iv, ik] .= (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase
         end
@@ -130,13 +130,12 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for ic in 1:N_c
-            c = h5open(path * "/realspace_$(N_rs[1]).h5", "r") do file
-                read(file, lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
-            end
+            c = read(file, lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
 
             u_c[:, ic, ik] .= (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase
         end
     end
+    close(file)
 
     return E_v, E_c, u_v, u_c
 end
@@ -172,7 +171,7 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     end
 
     w_hat = []
-    file = h5open(path * "/bse_output.h5", "r")
+    file = h5open(path * "/bse_output_screening.h5", "r")
     for iq in 1:size(q_bz, 2)
         wqq = read(file, "screenedpotential/" * lpad(string(iq), 4, string(0)) * "/wqq")
         G_len = size(G_vec[iq], 2)
@@ -188,7 +187,7 @@ function read_pmat(N_core, N_v, N_c, N_k, path)
     pmat = zeros(Complex{Float64}, N_v * N_c * N_k, 3)
     pmat_reshaped = reshape(pmat, N_v, N_c, N_k, 3)
 
-    file = h5open(path * "/pmat.h5", "r")
+    file = h5open(path * "/bse_output_screening.h5", "r")
     for ik in 1:N_k
         pmat_block = permutedims(read(file, "pmat/" * lpad(string(ik), 4, string(0)) * "/pmat/"), [3, 4, 2, 1])
         pmat_reshaped[:, :, ik, :] = pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 1] +
