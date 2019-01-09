@@ -2,6 +2,9 @@
 *.jl.*.cov
 *.jl.mem
 
+diamond/
+graphene/
+
 results/
 results_*/
 
