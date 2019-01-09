@@ -44,6 +44,13 @@ function lanczos_eig(H, d, N_iter)
     return ev_lanczos, ef_lanczos
 end
 
+function lanczos_eig(α::AbstractVector, β, N_iter)
+    T̂ = SymTridiagonal(vcat(α[1:N_iter], α[(N_iter - 1):-1:1]), vcat(β[1:N_iter], β[(N_iter - 2):-1:1]))
+    F = eigen(T̂)
+    ev_lanczos, ef_lanczos = F.values, F.vectors
+    return ev_lanczos, ef_lanczos
+end
+
 function optical_absorption_vector(prob::BSEProblem1D)
     return optical_absorption_vector(prob.u_v, prob.u_c, prob.E_v, prob.E_c, prob.prob.r_unit, prob.prob.k_bz)
 end
@@ -78,6 +85,17 @@ function lanczos_optical_absorption(prob::BSEProblem, isdf::ISDF, N_iter, g, Era
     absorption .*= 8 * π^2 / l
 
     return absorption
+end
+
+function lanczos_optical_absorption(α::AbstractVector, β, N_iter, g, Erange) # TODO: unify with matrix, vector function below?
+    ev_lanczos, ef_lanczos = lanczos_eig(α, β, N_iter)
+
+    optical_absorption = zeros(length(Erange))
+    for j in 1:(2 * N_iter - 1)
+        optical_absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
+    end
+
+    return optical_absorption
 end
 
 function lanczos_optical_absorption(H, d, N_iter, g, Erange)
