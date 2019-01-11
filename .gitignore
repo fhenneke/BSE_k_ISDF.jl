@@ -3,6 +3,7 @@
 *.jl.mem
 
 diamond/
+diamond-reduced/
 graphene/
 
 results/
