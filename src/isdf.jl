@@ -108,6 +108,22 @@ function isdf_error_estimate(u_i, ζ, r_μ_indices, N_k_samples)
     norm(M_sample - ζ * M_sample[r_μ_indices, :]) / norm(M_sample)
 end
 
+#TODO: find out if the following method is worth it as fallback
+# function isdf_error_estimate(u_i, ζ, r_μ_indices, N_k_samples)
+#     N_unit, N_i, N_k = size(u_i)
+#     ik_samples = rand(1:N_k, N_k_samples)
+#     error2 = 0.0
+#     normalization2 = 0.0
+#     col = zeros(Complex{Float64}, N_unit)
+#     for ii in 1:N_i, ik in 1:N_k, jj in 1:N_i, jk in ik_samples
+#         @views col[:] .= u_i[:, jj, jk] .* conj.(u_i[:, ii, ik])
+#         normalization2 += norm(col)^2
+#         error2 += norm(col - ζ * col[r_μ_indices])^2
+#     end
+#
+#     return sqrt(error2 / normalization2)
+# end
+
 function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
     N_unit, N_c, N_k = size(u_c)
     N_unit, N_v, N_k = size(u_v)
