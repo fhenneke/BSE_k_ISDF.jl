@@ -117,7 +117,7 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for iv in 1:N_v
-            c = read(file, lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
+            c = read(file, "wfplot/" * lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
 
             u_v[:, iv, ik] .= (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase
         end
@@ -130,7 +130,7 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[2] + 1)[1:N_rs[2]] .* k_bz[2, ik]),
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[1] + 1)[1:N_rs[1]] .* k_bz[1, ik]))
         for ic in 1:N_c
-            c = read(file, lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
+            c = read(file, "wfplot/" * lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
 
             u_c[:, ic, ik] .= (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase
         end
