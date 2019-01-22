@@ -8,8 +8,8 @@ using Plots, LaTeXStrings
 BLAS.set_num_threads(1)
 FFTW.set_num_threads(1)
 
-push!(LOAD_PATH, "/home/oim3l/Work/Projects/Excitons/Code")
-cd("/home/oim3l/Work/Projects/Excitons/Code/BSE_k_ISDF/experiments")
+push!(LOAD_PATH, "/home/felix/Work/Research/Code")
+cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
 
 using Revise #remove after debugging
 using BSE_k_ISDF

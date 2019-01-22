@@ -7,7 +7,7 @@ using Plots, LaTeXStrings, LinearAlgebra
 
 pyplot()
 
-cd("/home/oim3l/Work/Projects/Excitons/Code/BSE_k_ISDF/experiments")
+cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
 
 example_string = "ex2"
 
