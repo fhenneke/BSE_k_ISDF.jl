@@ -424,7 +424,7 @@ function setup_W(prob::BSEProblemExciting, isdf)
     u_c_cc = isdf.u_c_cc
 
     W_tilde = assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
-    W_workspace = create_W_workspace3d(N_v, N_c, N_ks, N_k_diffs, N_μ, N_ν)
+    W_workspace = create_W_workspace3d(N_v, N_c, N_ks, N_k_diffs, N_ν, N_μ)
 
     W = LinearMap{Complex{Float64}}(
         x -> W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace),
