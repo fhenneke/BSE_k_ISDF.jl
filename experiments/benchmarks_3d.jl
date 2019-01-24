@@ -27,8 +27,9 @@ N_μ_irs = (3, 3, 3)
 N_μ_mt = 2 * 3^3
 
 #variable parameters
-N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9)]
-BenchmarkTools.DEFAULT_PARAMETERS.seconds = 20
+N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9), (13, 13, 13)]
+BenchmarkTools.DEFAULT_PARAMETERS.seconds = 60
+BenchmarkTools.DEFAULT_PARAMETERS.gcsample = true
 for N_ks in N_ks_vec
     prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path * "$(N_ks...)_$(N_1d)/")
 
@@ -36,7 +37,7 @@ for N_ks in N_ks_vec
     t_isdf = @benchmark BSE_k_ISDF.ISDF(prob, (N_μ_irs, N_μ_mt))
 
     H = BSE_k_ISDF.setup_H(prob, isdf)
-    t_H_setup = @benchmark BSE_k_ISDF.setup_H($prob, $isdf)
+    t_H_setup = @benchmark BSE_k_ISDF.setup_H(prob, isdf)
 
     x = rand(N_v * N_c * prod(N_ks)) + im * rand(N_v * N_c * prod(N_ks))
     H * x
