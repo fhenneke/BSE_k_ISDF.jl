@@ -103,34 +103,32 @@ end
 function isdf_error_estimate(u_i, ζ, r_μ_indices, N_k_samples)
     N_unit, N_i, N_k = size(u_i)
     ik_samples = rand(1:N_k, N_k_samples)
-    M_sample_reshaped = [u_i[ir, jj, jk] * conj(u_i[ir, ii, ik]) for ir in 1:N_unit, ii in 1:N_i, ik in ik_samples, jj in 1:N_i, jk in ik_samples]
-    M_sample = reshape(M_sample_reshaped, N_unit, (N_i * N_k_samples)^2)
-    norm(M_sample - ζ * M_sample[r_μ_indices, :]) / norm(M_sample)
-end
+    error2 = 0.0
+    normalization2 = 0.0
+    col = zeros(Complex{Float64}, N_unit)
+    for ii in 1:N_i, ik in ik_samples, jj in 1:N_i, jk in ik_samples
+        @views col[:] .= u_i[:, jj, jk] .* conj.(u_i[:, ii, ik])
+        normalization2 += norm(col)^2
+        error2 += norm(col - ζ * col[r_μ_indices])^2
+    end
 
-#TODO: find out if the following method is worth it as fallback
-# function isdf_error_estimate(u_i, ζ, r_μ_indices, N_k_samples)
-#     N_unit, N_i, N_k = size(u_i)
-#     ik_samples = rand(1:N_k, N_k_samples)
-#     error2 = 0.0
-#     normalization2 = 0.0
-#     col = zeros(Complex{Float64}, N_unit)
-#     for ii in 1:N_i, ik in 1:N_k, jj in 1:N_i, jk in ik_samples
-#         @views col[:] .= u_i[:, jj, jk] .* conj.(u_i[:, ii, ik])
-#         normalization2 += norm(col)^2
-#         error2 += norm(col - ζ * col[r_μ_indices])^2
-#     end
-#
-#     return sqrt(error2 / normalization2)
-# end
+    return sqrt(error2 / normalization2)
+end
 
 function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
     N_unit, N_c, N_k = size(u_c)
     N_unit, N_v, N_k = size(u_v)
     ik_samples = rand(1:N_k, N_k_samples)
-    M_sample_reshaped = [u_c[ir, ic, ik] * conj(u_v[ir, iv, ik]) for ir in 1:N_unit, iv in 1:N_v, ic in 1:N_c, ik in ik_samples]
-    M_sample = reshape(M_sample_reshaped, N_unit, N_v * N_c * N_k_samples)
-    norm(M_sample - ζ * M_sample[r_μ_indices, :]) / norm(M_sample)
+    error2 = 0.0
+    normalization2 = 0.0
+    col = zeros(Complex{Float64}, N_unit)
+    for iv in 1:N_v, ic in 1:N_c, ik in ik_samples
+        @views col[:] .= u_c[:, ic, ik] .* conj.(u_v[:, iv, ik])
+        normalization2 += norm(col)^2
+        error2 += norm(col - ζ * col[r_μ_indices])^2
+    end
+
+    return sqrt(error2 / normalization2)
 end
 
 function assemble_M(prob::BSEProblem)
