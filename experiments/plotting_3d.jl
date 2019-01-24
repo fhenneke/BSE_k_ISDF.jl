@@ -110,17 +110,18 @@ savefig("results_" * example_string * "/timings_M_tol.pdf")
 # %% plot error
 
 # %% plotting of error in M
-N_unit = 128
-N_k = 256
+path = "/home/felix/Work/Research/Code/BSE_k_ISDF/experiments/diamond/131313_20/"
 
-N_μ_cc_vec, N_μ_vv_vec, N_μ_vc_vec, errors_M_cc, errors_M_vv, errors_M_vc =  load("results_" * example_string * "/errors_M_$(N_unit)_$(N_k).jld2", "N_μ_cc_vec", "N_μ_vv_vec", "N_μ_vc_vec", "errors_M_cc", "errors_M_vv", "errors_M_vc")
+N_μs_vec, errors_M_cc, errors_M_vv, errors_M_vc =  load(path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
 
-plot(title = "Error in ISDF", xlabel = L"N_\mu^{ij}", yscale = :log10, ylims = (1e-10, 1e0))
-plot!(N_μ_cc_vec, errors_M_cc, m = :circ, label = L"M_{cc}")
-plot!(N_μ_vv_vec, errors_M_vv, m = :square, label = L"M_{vv}")
-plot!(N_μ_vc_vec, errors_M_vc, m = :diamond, label = L"M_{vc}")
+N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
 
-savefig("results_" * example_string * "/errors_M.pdf")
+plot(title = "Error in ISDF", xlabel = L"N_\mu^{ij}", yscale = :log10, ylims = (5e-4, 1e0))
+plot!(N_μ_vec, errors_M_cc, m = :circ, label = L"M_{cc}")
+plot!(N_μ_vec, errors_M_vv, m = :square, label = L"M_{vv}")
+plot!(N_μ_vec, errors_M_vc, m = :diamond, label = L"M_{vc}")
+
+savefig(path * "/errors_M.pdf")
 
 # %% plotting of error in H
 M_tol_vec, errors_H = load("results_" * example_string * "/errors_H_128_128.jld2", "M_tol_vec", "errors_H")
