@@ -32,8 +32,8 @@ BenchmarkTools.DEFAULT_PARAMETERS.seconds = 20
 for N_ks in N_ks_vec
     prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path * "$(N_ks...)_$(N_1d)/")
 
-    isdf = BSE_k_ISDF.ISDF(prob, N_μ_mt, N_μ_irs)
-    t_isdf = @benchmark BSE_k_ISDF.ISDF(prob, N_μ_mt, N_μ_irs)
+    isdf = BSE_k_ISDF.ISDF(prob, (N_μ_irs, N_μ_mt))
+    t_isdf = @benchmark BSE_k_ISDF.ISDF(prob, (N_μ_irs, N_μ_mt))
 
     H = BSE_k_ISDF.setup_H(prob, isdf)
     t_H_setup = @benchmark BSE_k_ISDF.setup_H($prob, $isdf)
