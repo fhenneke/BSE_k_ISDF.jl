@@ -4,7 +4,7 @@ import JLD2
 import FileIO: load
 import BenchmarkTools
 import BenchmarkTools: Trial, Parameters
-using Plots, LaTeXStrings, LinearAlgebra
+using Plots, LaTeXStrings, LinearAlgebra, Statistics
 
 pyplot()
 
@@ -71,19 +71,19 @@ N_μ_irs = (3, 3, 3)
 N_μ_mt = 2 * 3^3
 
 #variable parameters
-N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9)]
+N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9), (13, 13, 13)]
 
 results = [load("diamond/$(N_ks...)_$(N_1d)/benchmark_$(N_μ_irs...)_$(N_μ_mt).jld2") for N_ks in N_ks_vec]
 timings = ["t_isdf", "t_H_setup", "t_H_x"]
 
-setup_times = sum(1e-9 .* time.(mean.([res[t] for res in results, t in timings[1:2]])); dims = 2)
-evaluation_times = 1e-9 .* time.(mean.([res[t] for res in results, t in timings[3:3]]))
+setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
+evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
 
 plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
 plot!(prod.(N_ks_vec), setup_times, m = :circ, labels = "initial setup", xscale = :log10, yscale = :log10)
 plot!(prod.(N_ks_vec), evaluation_times, m = :square, labels = "matrix vector product")
 # plot!(N_k_vec, (0.5 * 80 * 1e-6 * 20^2) * N_k_vec.^2, ls = :dash, labels = "entrywise assembly of Hamiltonian")
-plot!(prod.(N_ks_vec), 1e-3 * prod.(N_ks_vec), ls = :dash, labels = L"O(N_k)")
+plot!(prod.(N_ks_vec), 3e-3 * prod.(N_ks_vec), ls = :dash, labels = L"O(N_k)")
 
 # savefig("results_" * example_string * "/timings_k.pdf")
 
