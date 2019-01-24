@@ -198,7 +198,7 @@ function read_pmat(N_core, N_v, N_c, N_k, path)
     return pmat
 end
 
-function find_r_μ(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
+function find_r_μ(prob::BSEProblemExciting, N_μ_irs, N_μ_mt)
     # uniform grid (interstitial region and muffin tin region)
     grid_1 = find_r_μ(prob.N_rs[1], N_μ_irs[1])
     grid_2 = find_r_μ(prob.N_rs[2], N_μ_irs[2])
@@ -234,10 +234,17 @@ function find_r_μ(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
     return r_μ_indices
 end
 
-function ISDF(prob::BSEProblemExciting, N_μ_mt, N_μ_irs)
-    r_μ_indices = find_r_μ(prob, N_μ_mt, N_μ_irs)
+function ISDF(prob::BSEProblemExciting, N_μ_vvs, N_μ_ccs, N_μ_vcs)
+    r_μ_vv_indices = find_r_μ(prob, N_μ_vvs[1], N_μ_vvs[2])
+    r_μ_cc_indices = find_r_μ(prob, N_μ_ccs[1], N_μ_ccs[2])
+    r_μ_vc_indices = find_r_μ(prob, N_μ_vcs[1], N_μ_vcs[2])
 
-    return ISDF(r_μ_indices, r_μ_indices, r_μ_indices, prob.u_v, prob.u_c)
+    return ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, prob.u_v, prob.u_c)
+end
+
+# TODO: check if this method is worth it
+function ISDF(prob::BSEProblemExciting, N_μs)
+    return ISDF(prob, N_μs, N_μs, N_μs)
 end
 
 """
