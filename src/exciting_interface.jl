@@ -31,6 +31,7 @@ struct BSEProblemExciting
     q_2bz_ind
     q_2bz_shift
     w_hat
+    gqmax
 end
 
 function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
@@ -52,8 +53,9 @@ function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
     E_v, E_c, u_v, u_c = read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path)
 
     N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat = read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
+    gqmax = parse(Float64, attribute(root(input_xml)["xs"][1], "gqmax"))
 
-    return BSEProblemExciting(input_xml, N_rs, r_lattice, r_cartesian, a_mat, Ω0_vol, atoms, N_ks, k_bz, b_mat, BZ_vol, E_v, E_c, u_v, u_c, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat)
+    return BSEProblemExciting(input_xml, N_rs, r_lattice, r_cartesian, a_mat, Ω0_vol, atoms, N_ks, k_bz, b_mat, BZ_vol, E_v, E_c, u_v, u_c, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat, gqmax)
 end
 
 function read_r_points_k_points(N_rs, path) # TODO: make into type constructor

@@ -318,7 +318,7 @@ function setup_V(prob::BSEProblemExciting, isdf)
     N_μ = isdf.N_μ_vc
     ζ_vc = isdf.ζ_vc
 
-    v_hat = 4 * pi * vec(mapslices(x -> norm(x) < 1e-10 || norm(prob.b_mat * x) > 2.0 ? 0.0 : 1 / norm(prob.b_mat * x)^2, fftfreq(N_rs...); dims = 1)) # TODO: read threshold for norm(prob.b_mat * x) from file? is it more accureate to just leave it out?
+    v_hat = 4 * pi * vec(mapslices(x -> norm(x) < 1e-10 || norm(prob.b_mat * x) > prob.gqmax ? 0.0 : 1 / norm(prob.b_mat * x)^2, fftfreq(N_rs...); dims = 1))
 
     V_tilde = assemble_V_tilde3d(v_hat, ζ_vc, Ω0_vol, N_rs[1], N_rs[2], N_rs[3], N_k)
     V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
