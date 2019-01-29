@@ -5,7 +5,7 @@ import HDF5: h5open, readmmap
 import LightXML: parse_file, root, attribute
 import Random: MersenneTwister, randsubseq
 
-struct BSEProblemExciting
+mutable struct BSEProblemExciting
     input_xml
 
     N_rs
