@@ -38,11 +38,7 @@ end
 
 function lanczos_eig(H, d, N_iter)
     α, β, U = lanczos(H, d, I, N_iter)
-
-    T̂ = SymTridiagonal(vcat(α, α[(end - 1):-1:1]), vcat(β, β[(end - 2):-1:1]))
-    F = eigen(T̂)
-    ev_lanczos, ef_lanczos = F.values, F.vectors
-    return ev_lanczos, ef_lanczos
+    return lanczos_eig(α, β, N_iter)
 end
 
 function lanczos_eig(α::AbstractVector, β, N_iter)
