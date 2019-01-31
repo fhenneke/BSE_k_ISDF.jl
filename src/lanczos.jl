@@ -1,4 +1,5 @@
 # lanczos absorption
+using ProgressMeter
 
 function lanczos(A, u_init, M, k)
     α = zeros(k)
@@ -20,7 +21,7 @@ function lanczos(A, u_init, M, k)
     U[:, 2] .= u
     v_old .= v
     v .= y ./ β[1]
-    for j in 2:k
+    @showprogress 1 "Lanczos iteration ..." for j in 2:k
         x .= A * v .- β[j - 1] .* u_old
         α[j] = real(v' * x)
         x .-= α[j] .* u
