@@ -52,7 +52,7 @@ function optical_absorption_vector(prob::BSEProblem1D)
     return optical_absorption_vector(prob.u_v, prob.u_c, prob.E_v, prob.E_c, prob.prob.r_unit, prob.prob.k_bz)
 end
 
-function optical_absorption_vector(u_v, u_c, E_v, E_c, r_unit, k_bz)
+function optical_absorption_vector(u_v, u_c, E_v, E_c, r_unit, k_bz) # TODO: make general? only works in 1d atm
     N_unit = length(r_unit)
     N_v = size(u_v, 2)
     N_c = size(u_c, 2)
@@ -65,23 +65,23 @@ function optical_absorption_vector(u_v, u_c, E_v, E_c, r_unit, k_bz)
             (E_c[ic, ik] - E_v[iv, ik])
             for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k])
 
-    return d /= norm(d)
+    return d
 end
 
-function lanczos_optical_absorption(prob::BSEProblem, isdf::ISDF, N_iter, g, Erange)
+function lanczos_optical_absorption(prob::BSEProblem, isdf::ISDF, N_iter, g, Erange) #TODO: adapt to 3d
     l = prob.prob.l
 
     H = setup_H(prob, isdf)
     d = optical_absorption_vector(prob)
-    ev_lanczos, ef_lanczos = lanczos_eig(H, d, N_iter)
+    ev_lanczos, ef_lanczos = lanczos_eig(H, normalize(d), N_iter)
 
-    absorption = zeros(length(Erange))
+    optical_absorption = zeros(length(Erange))
     for j in 1:(2 * N_iter - 1)
-        absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
+        optical_absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
     end
-    absorption .*= 8 * π^2 / l
+    optical_absorption .*= norm(d)^2 * 8 * π^2 / l
 
-    return absorption
+    return optical_absorption
 end
 
 function lanczos_optical_absorption(α::AbstractVector, β, N_iter, g, Erange) # TODO: unify with matrix, vector function below?
