@@ -62,9 +62,9 @@ savefig("diamond/timings_k.pdf")
 # %% plot error
 
 # %% plotting of error in M
-path = "/home/felix/Work/Research/Code/BSE_k_ISDF/experiments/diamond/131313_20/"
+example_path = "diamond/131313_20/"
 
-N_μs_vec, errors_M_vv, errors_M_cc, errors_M_vc =  load(path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
+N_μs_vec, errors_M_vv, errors_M_cc, errors_M_vc =  load(example_path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
 
 N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
 
@@ -73,7 +73,7 @@ plot!(N_μ_vec, errors_M_cc, m = :circ, label = L"M_{cc}")
 plot!(N_μ_vec, errors_M_vv, m = :square, label = L"M_{vv}")
 plot!(N_μ_vec, errors_M_vc, m = :diamond, label = L"M_{vc}")
 
-savefig(path * "/errors_M.pdf")
+savefig(example_path * "/errors_M.pdf")
 
 # %% plotting of error in H
 M_tol_vec, errors_H = load("results_" * example_string * "/errors_H_128_128.jld2", "M_tol_vec", "errors_H")
@@ -146,16 +146,16 @@ savefig("results_" * example_string * "/errors_spectrum.pdf")
 
 # %% plot  absorption spctrum for different N_μ
 
-path = "diamond/131313_20/"
+example_path = "diamond/131313_20/"
 N_ks = (13, 13, 13)
 Ω0_vol = 76.76103479594097
 
 # load reference
-Erange_exciting = readdlm(path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 1]
+Erange_exciting = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 1]
 absorption_exciting = zeros(length(Erange_exciting), 3)
-absorption_exciting[:, 1] = readdlm(path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 3]
-absorption_exciting[:, 2] = readdlm(path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC22.OUT")[19:end, 3]
-absorption_exciting[:, 3] = readdlm(path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC33.OUT")[19:end, 3]
+absorption_exciting[:, 1] = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 3]
+absorption_exciting[:, 2] = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC22.OUT")[19:end, 3]
+absorption_exciting[:, 3] = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC33.OUT")[19:end, 3]
 
 N_iter = 200
 direction = 1
@@ -167,7 +167,7 @@ Erange = Erange_exciting ./ Ha_to_eV
 M_tol_vec = [0.5, 0.25]
 optical_absorption_lanc = []
 for M_tol in M_tol_vec
-    α, β, norm_d2 = load(path * "/optical_absorption_lanczos_$(M_tol).jld2", "alpha", "beta", "norm d^2")
+    α, β, norm_d2 = load(example_path * "/optical_absorption_lanczos_$(M_tol).jld2", "alpha", "beta", "norm d^2")
 
     push!(optical_absorption_lanc, norm_d2 * 8 * pi^2 / (prod(N_ks) * Ω0_vol) * BSE_k_ISDF.lanczos_optical_absorption(α, β, N_iter, g, Erange))
 end
@@ -176,4 +176,4 @@ p_optical_absorption_M_tol = plot(title = "optical absorption spectrum", xlabel 
 plot!(p_optical_absorption_M_tol, Erange_exciting, absorption_exciting[:, direction], lw = 4, label = "reference spectrum")
 plot!(p_optical_absorption_M_tol, Erange_exciting, [optical_absorption_lanc[1] optical_absorption_lanc[2]], lw = 2, label = "approximate spectrum for " .* L"M_{tol} = " .* string.(transpose(M_tol_vec)))
 
-savefig(path * "/optical_absorption_spectrum.pdf")
+savefig(example_path * "/optical_absorption_spectrum.pdf")
