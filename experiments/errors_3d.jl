@@ -34,7 +34,15 @@ N_k_samples = 20 #TODO: maybe set a little higher
 
 # variable parameters
 
-N_μs_vec = [((2, 2, 2), 2 * 2^3), ((3, 3, 3), 2 * 2^3), ((3, 3, 3), 2 * 3^3), ((4, 4, 4), 2 * 3^3), ((4, 4, 4), 2 * 4^3), ((5, 5, 5), 2 * 4^3), ((5, 5, 5), 2 * 5^3), ((6, 6, 6), 2 * 5^3), ((6, 6, 6), 2 * 6^3), ((7, 7, 7), 2 * 6^3), ((7, 7, 7), 2 * 7^3)]
+f = N_μ -> begin
+    N_1d = 1
+    while (N_1d + 1)^3 * 2 < N_μ
+        N_1d += 1
+    end
+    ((N_1d, N_1d, N_1d), N_μ - N_1d^3)
+end
+
+N_μs_vec = [f(N_μ) for N_μ in [10, 20, 40, 60, 80, 100, 120, 140, 180, 220, 260, 300, 350, 400, 450, 500, 600, 700, 800, 1000]]
 
 u_v, u_c = prob.u_v, prob.u_c
 
@@ -79,7 +87,7 @@ direction = 1
 N_iter = 200
 
 #variable parameters
-M_tol_vec = [0.5, 0.25]#, 0.1]
+M_tol_vec = [0.5, 0.25, 0.1]
 
 # compute spectra
 for M_tol in M_tol_vec
