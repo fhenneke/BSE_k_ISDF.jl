@@ -97,7 +97,7 @@ for M_tol in M_tol_vec
 
     H = BSE_k_ISDF.setup_H(prob, isdf)
 
-    d = conj.(pmat[:, direction]) ./ ev
+    d = pmat[:, direction] ./ ev
 
     α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), I, N_iter)
 
