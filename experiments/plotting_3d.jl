@@ -144,10 +144,10 @@ plot!(p_errors_spectrum, M_tol_vec, errors_optical_absorption, m = :square, labe
 
 savefig("results_" * example_string * "/errors_spectrum.pdf")
 
-# %% plot  absorption spctrum for different N_μ
+# %% plot  absorption spctrum
 
-example_path = "diamond/131313_20/"
-N_ks = (13, 13, 13)
+example_path = "graphene/" # "diamond/131313_20/"
+N_ks = (42, 42, 1) # (13, 13, 13)
 Ω0_vol = 76.76103479594097
 
 # load reference
