@@ -68,7 +68,7 @@ function optical_absorption_vector(u_v, u_c, E_v, E_c, r_unit, k_bz) # TODO: mak
     return d
 end
 
-function lanczos_optical_absorption(prob::BSEProblem, isdf::ISDF, N_iter, g, Erange) #TODO: adapt to 3d
+function lanczos_optical_absorption(prob::AbstractBSEProblem, isdf::ISDF, N_iter, g, Erange) #TODO: adapt to 3d
     l = prob.prob.l
 
     H = setup_H(prob, isdf)

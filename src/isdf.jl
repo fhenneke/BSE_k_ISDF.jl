@@ -1,5 +1,56 @@
 # ISDF
 
+"""
+    ISDF type
+
+Stores information on interpolations vectors and interpolated values.
+The arrays `ζ_ij` and `u_ij` are chosen such that approximately
+`u_i ≈ ζ_ij * u_i`.
+"""
+struct ISDF
+    N_μ_vv #TODO: remove this information?
+    N_μ_cc
+    N_μ_vc
+    r_μ_vv_indices #TODO: remove this information?
+    r_μ_cc_indices
+    r_μ_vc_indices
+    u_v_vv
+    u_c_cc
+    u_v_vc
+    u_c_vc
+    ζ_vv
+    ζ_cc
+    ζ_vc
+end
+
+"""
+    size(isdf)
+
+Return the size as tuple (N_μ_v, N_μ_c, N_μ_vc).
+"""
+function size(isdf::ISDF)
+    return (size(isdf.u_v_vv, 1), size(isdf.u_c_cc, 1), size(
+    isdf.u_v_vc, 1))
+end
+
+"""
+    interpolation_vectors(isdf)
+
+Returns a 3-tuple of interpolation vectors of sizes `(N_r, N_μ_v)`, `(N_r, N_μ_c)`, and `(N_r, N_μ_vc)`.
+"""
+function interpolation_vectors(isdf::ISDF)
+    return isdf.ζ_vv, isdf.ζ_cc, isdf.ζ_vc
+end
+
+"""
+    interpolation_coefficients(isdf)
+
+Returns a 4-tuple of interpolation coefficients of sizes `(N_μ_v, N_v, N_k)`, `(N_μ_c, N_c, N_k)`, `(N_μ_vc, N_v, N_k)` and `(N_μ_vc, N_c, N_k)`.
+"""
+function interpolation_coefficients(isdf::ISDF)
+    return isdf.u_v_vv, isdf.u_c_cc, isdf.u_v_vc, isdf.u_c_vc
+end
+
 function ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, u_v, u_c)
     ζ_vv = assemble_ζ(u_v, r_μ_vv_indices)
     ζ_cc = assemble_ζ(u_c, r_μ_cc_indices)
@@ -12,15 +63,11 @@ function ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, u_v, u_c)
         ζ_vv, ζ_cc, ζ_vc)
 end
 
-function ISDF(prob::BSEProblem1D, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
-    N_unit = length(prob.prob.r_unit)
-    r_μ_vv_indices = find_r_μ(N_unit, N_μ_vv)
-    r_μ_cc_indices = find_r_μ(N_unit, N_μ_cc)
-    r_μ_vc_indices = find_r_μ(N_unit, N_μ_vc)
+"""
+    find_r_μ(N_unit, N_μ)
 
-    return ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, prob.u_v, prob.u_c)
-end
-
+Helper function to select `N_μ` points uniformly from the range `1:N_unit`.
+"""
 function find_r_μ(N_unit::Int, N_μ::Int)
     r_μ_indices = Int.(round.(range(1, stop = N_unit + 1, length = N_μ + 1)[1:(end - 1)]))
     return r_μ_indices
@@ -50,6 +97,8 @@ function assemble_ζ(u_i, u_j, r_μ_indices)
     ζ = copy((qr(B', Val(true)) \ A')')
     return ζ
 end
+
+# routines for estimating errors
 
 function isdf_error(prob, isdf)
     error_M_vv = isdf_error(prob.u_v, isdf.ζ_vv, isdf.r_μ_vv_indices)
@@ -131,7 +180,7 @@ function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
     return sqrt(error2 / normalization2)
 end
 
-function assemble_M(prob::BSEProblem)
+function assemble_M(prob::AbstractBSEProblem)
     M_vv = assemble_M(prob.u_v)
     M_cc = assemble_M(prob.u_c)
     M_vc = assemble_M(prob.u_v, prob.u_c)

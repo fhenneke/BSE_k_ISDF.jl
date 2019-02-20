@@ -5,7 +5,7 @@ import HDF5: h5open, readmmap
 import LightXML: parse_file, root, attribute
 import Random: MersenneTwister, randsubseq
 
-mutable struct BSEProblemExciting
+mutable struct BSEProblemExciting <: AbstractBSEProblem
     input_xml
 
     N_rs
@@ -185,6 +185,34 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     return N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat
 end
 
+function size(prob::BSEProblemExciting)
+    return (size(prob.E_v, 1), size(prob.E_c, 1), prod(prob.N_ks))
+end
+
+function size_k(prob::BSEProblemExciting)
+    return prob.N_ks
+end
+
+function size_r(prob::BSEProblemExciting)
+    return prob.N_rs
+end
+
+function energies(prob::BSEProblemExciting)
+    return prob.E_v, prob.E_c
+end
+
+function orbitals(prob::BSEProblemExciting)
+    return prob.u_v, prob.u_c
+end
+
+function lattice_matrix(prob::BSEProblemExciting)
+    return prob.a_mat
+end
+
+function compute_v_hat(prob::BSEProblemExciting)
+    return compute_v_hat(prob, prob.gqmax)
+end
+
 function read_pmat(N_core, N_v, N_c, N_k, path)
     pmat = zeros(Complex{Float64}, N_v * N_c * N_k, 3)
     pmat_reshaped = reshape(pmat, N_v, N_c, N_k, 3)
@@ -236,6 +264,18 @@ function find_r_μ(prob::BSEProblemExciting, N_μ_irs, N_μ_mt)
     return r_μ_indices
 end
 
+# TODO: use this method somewhere? is this worth it?
+function find_r_μ(prob::BSEProblemExciting, N_μ::Int)
+    N_1d = 1
+    while (N_1d + 1)^3 * 2 < N_μ
+        N_1d += 1
+    end
+    N_μ_irs = (N_1d, N_1d, N_1d)
+    N_μ_mt = N_μ - N_1d^3
+
+    return find_r_μ(prob, N_μ_irs, N_μ_mt)
+end
+
 function ISDF(prob::BSEProblemExciting, N_μ_vvs, N_μ_ccs, N_μ_vcs)
     r_μ_vv_indices = find_r_μ(prob, N_μ_vvs[1], N_μ_vvs[2])
     r_μ_cc_indices = find_r_μ(prob, N_μ_ccs[1], N_μ_ccs[2])
@@ -249,6 +289,7 @@ function ISDF(prob::BSEProblemExciting, N_μs)
     return ISDF(prob, N_μs, N_μs, N_μs)
 end
 
+# TODO: check if this is still necessary for tests
 """
 input: 2d array of k points (size (d, N_k))
        2d array of k point differences (size (d, 2^d * N_k))

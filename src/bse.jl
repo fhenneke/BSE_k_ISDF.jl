@@ -1,84 +1,6 @@
 # BSE Hamiltonian
 using FFTW, LinearMaps
 
-function BSEProblem1D(sp_prob::SPProblem1D, N_core, N_v, N_c, V, W)
-    sp_sol = solve(sp_prob)
-    return BSEProblem1D(sp_sol, N_core, N_v, N_c, V, W)
-end
-
-function BSEProblem1D(sp_sol::SPSolution1D, N_core, N_v, N_c, V, W)
-    sp_prob = sp_sol.prob
-    l = sp_prob.l
-    N_unit = length(sp_prob.r_unit)
-    N_k = length(sp_prob.k_bz)
-
-    E_v = [sp_sol.ev[ik][N_core + iv] for iv in 1:N_v, ik in 1:N_k]
-    E_c = [sp_sol.ev[ik][N_core + N_v + ic] for ic in 1:N_c, ik in 1:N_k]
-    u_v = [sqrt(N_unit / l) * sp_sol.ef[ik][ir, N_core + iv] for ir in 1:N_unit, iv in 1:N_v, ik in 1:N_k]
-    u_c = [sqrt(N_unit / l) * sp_sol.ef[ik][ir, N_core + N_v + ic] for ir in 1:N_unit, ic in 1:N_c, ik in 1:N_k]
-
-    # fourier representations of V and W
-    v_hat = compute_hat_Gq(V, sp_prob.r_super, sp_prob.r_unit)
-    w_hat = compute_hat_GGq(W, sp_prob.r_super, sp_prob.r_unit)
-
-    return BSEProblem1D(sp_prob, N_core, N_v, N_c, N_k, E_v, E_c, u_v, u_c, v_hat, w_hat)
-end
-
-function compute_hat_Gq(V, r_super, r_unit)
-    N_unit = length(r_unit)
-    N_k = div(length(r_super), N_unit)
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-
-    v = V.(r_super, 0.)
-    v_hat_vec = (-1).^(0:(length(r_super) - 1)) .* fft(v) * (l / N_unit)
-    v_hat = ifftshift(transpose(reshape(circshift(v_hat_vec, div(N_k, 2)), N_k, N_unit)), 2)
-
-    return v_hat
-end
-
-function compute_hat_GGq(W, r_super, r_unit)
-    N_unit = length(r_unit)
-    N_k = div(length(r_super), N_unit)
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-    L = N_k * l
-
-    w = W.(r_super .+ r_unit', r_unit', l, L)
-    w_hat_vec = (-1).^((0:(N_k * N_unit - 1))) .* fft(w) * (l / N_unit)^2;
-
-    A = (iG, iGp, iq) -> begin
-        if iq > div(N_k, 2)
-            iq_res = iq - N_k
-        else
-            iq_res = iq
-        end
-        if iG > div(N_unit, 2)
-            iG_res = iG - N_unit
-        else
-            iG_res = iG
-        end
-        if iGp > div(N_unit, 2)
-            iGp_res = iGp - N_unit
-        else
-            iGp_res = iGp
-        end
-        iqG_r = mod1(iq_res + N_k * (iG_res - 1), N_k * N_unit)
-        iG_c = mod1(iG_res - iGp_res + 1, N_unit)
-
-        return (iqG_r, iG_c)
-    end
-
-    w_hat = [w_hat_vec[A(iG, iGp, iq)...]
-             for iG in 1:N_unit, iGp in 1:N_unit, iq in 1:N_k]
-
-    return w_hat
-end
-
-function supercell_difference(r_1, r_2, L)
-    r_1 - r_2 - round((r_1 - r_2) / L) * L
-end
-
 # only for consitency checks
 function V_entry(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
     N_unit = size(u_v, 1)
@@ -275,16 +197,22 @@ end
 ###############################################################################
 
 # methods for setting up the matrix free Hamiltonian
+"""
+    setup_D(prob)
+
+Assemble a sparse matrix of size `(N_v * N_c * N_K, N_v * N_c * N_k)`
+for the diagonal part of the BSE Hamiltonian. The entries on the
+diagonal are given by the single particle energy differences.
+"""
 function setup_D(prob)
-    E_v, E_c = prob.E_v, prob.E_c
-    N_v = size(E_v, 1)
-    N_c = size(E_c, 1)
-    N_k = size(E_c, 2)
+    E_v, E_c = energies(prob)
+    N_v, N_c, N_k = size(prob)
 
     D = spdiagm(0 => vec([E_c[ic, ik] - E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]))
     return D
 end
 
+# TODO: can those methods be combined?
 function setup_V(prob::BSEProblem1D, isdf)
     v_hat = prob.v_hat
     r_super = prob.prob.r_super
@@ -295,7 +223,7 @@ function setup_V(prob::BSEProblem1D, isdf)
     N_μ = isdf.N_μ_vc
     ζ_vc = isdf.ζ_vc
 
-    V_tilde = assemble_V_tilde(v_hat[:, 1], ζ_vc, r_super, r_unit)
+    V_tilde = assemble_V_tilde1d(v_hat[:, 1], ζ_vc, r_super, r_unit)
     V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
 
     u_v_vc_conj = conj.(isdf.u_v_vc)
@@ -308,23 +236,28 @@ function setup_V(prob::BSEProblem1D, isdf)
     return V
 end
 
-function setup_V(prob::BSEProblemExciting, isdf)
-    N_rs = prob.N_rs
-    N_v = size(prob.E_v, 1)
-    N_c = size(prob.E_c, 1)
-    N_k = prod(prob.N_ks)
-    Ω0_vol = prob.Ω0_vol
+"""
+    setup_V(prob, isdf)
 
-    N_μ = isdf.N_μ_vc
-    ζ_vc = isdf.ζ_vc
+Create a linear operator for the application of `V` to a vector.
+The result is a hermitian `LinearMap` of size
+`(N_v * N_c * N_K, N_v * N_c * N_k)`.
+"""
+function setup_V(prob::BSEProblemExciting, isdf::ISDF)
+    N_rs = size_r(prob)
+    N_v, N_c, N_k = size(prob)
+    Ω0_vol = Ω0_volume(prob)
 
-    v_hat = 4 * pi * vec(mapslices(x -> norm(x) < 1e-10 || norm(prob.b_mat * x) > prob.gqmax ? 0.0 : 1 / norm(prob.b_mat * x)^2, fftfreq(N_rs...); dims = 1))
+    N_μ = size(isdf)[3]
+    ζ_vc = interpolation_vectors(isdf)[3]
 
-    V_tilde = assemble_V_tilde3d(v_hat, ζ_vc, Ω0_vol, N_rs[1], N_rs[2], N_rs[3], N_k)
+    v_hat = compute_v_hat(prob)
+
+    V_tilde = assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
     V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
 
-    u_v_vc_conj = conj.(isdf.u_v_vc)
-    u_c_vc = isdf.u_c_vc
+    u_v_vc_conj = conj.(interpolation_coefficients(isdf)[3])
+    u_c_vc = interpolation_coefficients(isdf)[4]
 
     V = LinearMap{Complex{Float64}}(
         x -> V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace),
@@ -333,7 +266,8 @@ function setup_V(prob::BSEProblemExciting, isdf)
     return V
 end
 
-function assemble_V_tilde(v_hat, ζ_vc, r_super, r_unit)
+#TODO: combine with 3d version
+function assemble_V_tilde1d(v_hat, ζ_vc, r_super, r_unit)
     N_unit = length(r_unit)
     N_cells = div(length(r_super), N_unit)
     N_μ = size(ζ_vc, 2)
@@ -349,12 +283,17 @@ function assemble_V_tilde(v_hat, ζ_vc, r_super, r_unit)
     return V_tilde
 end
 
-function assemble_V_tilde3d(v_hat, ζ_vc, Ω0_vol, N_r_1, N_r_2, N_r_3, N_k)
-    N_unit = size(ζ_vc, 1)
+"""
+    assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_r_1, N_r_2, N_r_3, N_k)
+
+Assembles a Matrix representation of `V` in the basis given by interpolation vectors of the ISDF.
+"""
+function assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
+    N_r = size(ζ_vc, 1)
 
     ζ_vc_hat = zeros(Complex{Float64}, size(ζ_vc))
     for iμ in 1:size(ζ_vc, 2)
-        ζ_vc_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_vc[:, iμ], N_r_1, N_r_2, N_r_3)))
+        ζ_vc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_vc[:, iμ], N_r)))
     end
 
     V_tilde = 1 / (Ω0_vol * N_k) * ζ_vc_hat' * (v_hat .* ζ_vc_hat)
@@ -362,6 +301,13 @@ function assemble_V_tilde3d(v_hat, ζ_vc, Ω0_vol, N_r_1, N_r_2, N_r_3, N_k)
     return V_tilde
 end
 
+"""
+    create_V_workspace(N_v, N_c, N_k, N_μ)
+
+Allocates momory for efficiently computing the application of ``V`` to
+a vector. The output is a 5-tuple of arrays of different dimension and
+sizes.
+"""
 function create_V_workspace(N_v, N_c, N_k, N_μ)
     X = complex(zeros(N_v, N_c, N_k))
     B = complex(zeros(N_μ, N_c, N_k))
@@ -373,6 +319,7 @@ function create_V_workspace(N_v, N_c, N_k, N_μ)
     return V_workspace
 end
 
+#TODO: can this be combined with the 1D version?
 function setup_W(prob::BSEProblem1D, isdf)
     w_hat = prob.w_hat
 
@@ -390,8 +337,8 @@ function setup_W(prob::BSEProblem1D, isdf)
     u_v_vv_conj = conj.(isdf.u_v_vv)
     u_c_cc = isdf.u_c_cc
 
-    W_tilde = assemble_W_tilde(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
-    W_workspace = create_W_workspace(N_v, N_c, N_k, N_ν, N_μ)
+    W_tilde = assemble_W_tilde1d(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
+    W_workspace = create_W_workspace1d(N_v, N_c, N_k, N_ν, N_μ)
     W_tilde_hat = fft(W_tilde, 1)
 
 
@@ -407,34 +354,31 @@ function setup_W(prob::BSEProblemExciting, isdf)
     q_2bz_ind = prob.q_2bz_ind
     q_2bz_shift = prob.q_2bz_shift
 
-    N_rs = prob.N_rs
-    N_v = size(prob.E_v, 1)
-    N_c = size(prob.E_c, 1)
-    N_ks = prob.N_ks
-    N_k = prod(N_ks)
-    k_bz = prob.k_bz
-    Ω0_vol = prob.Ω0_vol
+    N_rs = size_r(prob)
+    N_v, N_c, N_k = size(prob)
+    N_ks = size_k(prob)
+    Ω0_vol = Ω0_volume(prob)
     N_k_diffs = prob.N_k_diffs
 
-    N_μ = isdf.N_μ_cc
-    N_ν = isdf.N_μ_vv
-    ζ_vv = isdf.ζ_vv
-    ζ_cc = isdf.ζ_cc
-    u_v_vv_conj = conj.(isdf.u_v_vv)
-    u_c_cc = isdf.u_c_cc
+    N_ν = size(isdf)[1]
+    N_μ = size(isdf)[2]
+    ζ_vv = interpolation_vectors(isdf)[1]
+    ζ_cc = interpolation_vectors(isdf)[2]
+    u_v_vv_conj = conj.(interpolation_coefficients(isdf)[1]) #TODO: test whether the conjugation is really necessary for performance
+    u_c_cc = interpolation_coefficients(isdf)[2]
 
-    W_tilde = assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
-    W_workspace = create_W_workspace3d(N_v, N_c, N_ks, N_k_diffs, N_ν, N_μ)
+    W_tilde = assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+    W_workspace = create_W_workspace(N_v, N_c, N_ks, N_k_diffs, N_ν, N_μ)
 
     W = LinearMap{Complex{Float64}}(
-        x -> W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace),
+        x -> W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace),
         N_v * N_c * N_k; ishermitian=true)
 
     return W
 end
 
 
-function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
+function assemble_W_tilde1d(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
     N_unit = length(r_unit)
     N_cells = div(length(r_super), N_unit)
     N_μ = size(ζ_cc, 2)
@@ -482,19 +426,19 @@ function G_vector_to_index(G, N_rs) # TODO: make fast for all dimensions
     return ind
 end
 
-function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
-    N_unit = size(ζ_vv, 1)
+function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+    N_r = size(ζ_vv, 1)
     N_ν = size(ζ_vv, 2)
     N_μ = size(ζ_cc, 2)
     N_q = length(q_2bz_ind)
 
     ζ_vv_hat = zeros(Complex{Float64}, size(ζ_vv))
     for iμ in 1:size(ζ_vv, 2)
-        ζ_vv_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_vv[:, iμ], N_rs)))
+        ζ_vv_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_vv[:, iμ], N_rs)))
     end
     ζ_cc_hat = zeros(Complex{Float64}, size(ζ_cc))
     for iμ in 1:size(ζ_cc, 2)
-        ζ_cc_hat[:, iμ] = Ω0_vol / N_unit * vec(fft(reshape(ζ_cc[:, iμ], N_rs)))
+        ζ_cc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_cc[:, iμ], N_rs)))
     end
 
     W_tilde = complex(zeros(N_q, N_μ, N_ν))
@@ -508,7 +452,7 @@ function assemble_W_tilde3d(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, 
     return W_tilde
 end
 
-function create_W_workspace(N_v, N_c, N_k, N_ν, N_μ)
+function create_W_workspace1d(N_v, N_c, N_k, N_ν, N_μ)
     P = plan_fft(complex(zeros(2 * N_k, N_μ, N_ν)), 1)
     P_inv = inv(P)
     X = complex(zeros(N_v, N_c, N_k))
@@ -525,7 +469,7 @@ function create_W_workspace(N_v, N_c, N_k, N_ν, N_μ)
     return W_workspace
 end
 
-function create_W_workspace3d(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
+function create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
     N_k = prod(N_ks)
     p = plan_fft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
     p_back = plan_bfft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
@@ -596,6 +540,7 @@ function w_conv(w, a)
     return w_conv!(similar(a), w, a)
 end
 
+# TODO what to do with the reference implementation? move to interface code?
 function w_conv_reference!(b, w, a)
     dim = ndims(a)
     sa = size(a)
@@ -615,18 +560,6 @@ end
 function w_conv_reference(w, a)
     b = similar(a)
     return w_conv_reference!(b, w, a)
-end
-
-function fftfreq(n1, n2, n3)
-    f1 = vcat(collect(0:(div(n1, 2) - (1 - n1 % 2))), collect(-div(n1, 2):-1))
-    f2 = vcat(collect(0:(div(n2, 2) - (1 - n2 % 2))), collect(-div(n2, 2):-1))
-    f3 = vcat(collect(0:(div(n3, 2) - (1 - n3 % 2))), collect(-div(n3, 2):-1))
-
-    F1 = kron(ones(n3), ones(n2), f1)
-    F2 = kron(ones(n3), f2, ones(n1))
-    F3 = kron(f3, ones(n2), ones(n1))
-
-    return vcat(F1', F2', F3')
 end
 
 # matrix free V
@@ -664,8 +597,8 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     return vec(E)
 end
 
-# matrix free W
-function W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
+# matrix free W TODO: combine with 3d version?
+function W_times_vector1d(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
     N_k = size(u_v_vv_conj, 3)
     N_v = size(u_v_vv_conj, 2)
     N_c = size(u_c_cc, 2)
@@ -689,7 +622,7 @@ function W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
     return copy(vec(F))
 end
 
-function W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
+function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     N_v = size(u_v_vv_conj, 2)
     N_c = size(u_c_cc, 2)
     N_k = size(u_v_vv_conj, 3)
@@ -718,6 +651,7 @@ function W_times_vector3d(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     return copy(vec(F))
 end
 
+#TODO: remove/combine with optimizations in 3d version
 function W_times_vector_fast!(y, x, W_tilde_hat, u_v_vv_conj, u_c_cc, u_c_cc_conj, W_workspace)
     N_μ = size(W_tilde_hat, 2)
     N_ν = size(W_tilde_hat, 3)
