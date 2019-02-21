@@ -212,11 +212,6 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     sa = size(a)
     sw = size(w)
 
-    all(sa .<= sw) || throw(ArgumentError("size of w needs to be larger than the size of a"))
-    size(ap) == sw || throw(ArgumentError("size of a buffer needs to equal the size of w"))
-    size(bp) == sw || throw(ArgumentError("size of b buffer needs to equal the size of w"))
-    size(w_hat) == sw || throw(ArgumentError("size of w_hat buffer needs to equal the size of w"))
-
     indices = CartesianIndices(sa)
 
     copyto!(ap, indices, a, indices)
@@ -237,8 +232,6 @@ function w_conv_reference!(b, w, a)
     dim = ndims(a)
     sa = size(a)
     sw = size(w)
-
-    all(sa .<= sw) || throw(ArgumentError("size of w needs to be larger than the size of a"))
 
     for i in CartesianIndices(sa)
         b[i] = zero(eltype(b))
