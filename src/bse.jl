@@ -17,30 +17,6 @@ function setup_D(prob)
     return D
 end
 
-# TODO: can those methods be combined?
-function setup_V(prob::BSEProblem1D, isdf)
-    v_hat = prob.v_hat
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-    N_μ = isdf.N_μ_vc
-    ζ_vc = isdf.ζ_vc
-
-    V_tilde = assemble_V_tilde1d(v_hat[:, 1], ζ_vc, r_super, r_unit)
-    V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
-
-    u_v_vc_conj = conj.(isdf.u_v_vc)
-    u_c_vc = isdf.u_c_vc
-
-    V = LinearMap{Complex{Float64}}(
-        x -> V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace),
-        N_v * N_c * N_k; ishermitian=true)
-
-    return V
-end
-
 """
     setup_V(prob, isdf)
 
@@ -65,23 +41,6 @@ function setup_V(prob::BSEProblemExciting, isdf::ISDF)
         N_v * N_c * N_k; ishermitian=true)
 
     return V
-end
-
-#TODO: combine with 3d version
-function assemble_V_tilde1d(v_hat, ζ_vc, r_super, r_unit)
-    N_unit = length(r_unit)
-    N_cells = div(length(r_super), N_unit)
-    N_μ = size(ζ_vc, 2)
-    N_ν = N_μ
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    ζ_vc_hat = fft(ζ_vc, 1) * (l / N_unit)
-
-    V_tilde = 1 / L * ζ_vc_hat' * (v_hat .* ζ_vc_hat)
-
-    return V_tilde
 end
 
 """
@@ -126,36 +85,6 @@ function create_V_workspace(N_v, N_c, N_k, N_μ)
     return V_workspace
 end
 
-#TODO: can this be combined with the 1D version?
-function setup_W(prob::BSEProblem1D, isdf)
-    w_hat = prob.w_hat
-
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    k_bz = prob.prob.k_bz
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-
-    N_μ = isdf.N_μ_cc
-    N_ν = isdf.N_μ_vv
-    ζ_vv = isdf.ζ_vv
-    ζ_cc = isdf.ζ_cc
-    u_v_vv_conj = conj.(isdf.u_v_vv)
-    u_c_cc = isdf.u_c_cc
-
-    W_tilde = assemble_W_tilde1d(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
-    W_workspace = create_W_workspace1d(N_v, N_c, N_k, N_ν, N_μ)
-    W_tilde_hat = fft(W_tilde, 1)
-
-
-    W = LinearMap{Complex{Float64}}(
-        x -> W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace),
-        N_v * N_c * N_k; ishermitian=true)
-
-    return W
-end
-
 """
     setup_W(prob, isdf)
 
@@ -189,43 +118,6 @@ function setup_W(prob::BSEProblemExciting, isdf)
         N_v * N_c * N_k; ishermitian=true)
 
     return W
-end
-
-
-function assemble_W_tilde1d(w_hat, ζ_vv, ζ_cc, r_super, r_unit, k_bz)
-    N_unit = length(r_unit)
-    N_cells = div(length(r_super), N_unit)
-    N_μ = size(ζ_cc, 2)
-    N_ν = size(ζ_vv, 2)
-    N_k = length(k_bz)
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    ζ_cc_hat = fft(ζ_cc, 1) * (l / N_unit)
-    ζ_vv_hat = fft(ζ_vv, 1) * (l / N_unit)
-    ζ_cc_hat_shift = circshift(ζ_cc_hat, (1, 0))
-    ζ_vv_hat_shift = circshift(ζ_vv_hat, (1, 0))
-
-    k_bz_shifted = range(0.0, stop = k_bz[end] - k_bz[1], length = N_k)
-
-    W_tilde_shifted = complex(zeros(N_k, N_μ, N_ν))
-
-    for ik in 1:div(N_k, 2)
-        W_tilde_shifted[ik, :, :] .= W_tilde_at_q(@view(w_hat[:, :, ik]), ζ_cc_hat, ζ_vv_hat, l, L)
-    end
-    for ik in (div(N_k, 2) + 1):N_k
-        W_tilde_shifted[ik, :, :] .= W_tilde_at_q(@view(w_hat[:, :, ik]), ζ_cc_hat_shift, ζ_vv_hat_shift, l, L)
-    end
-
-    # W_tilde = cat(1, W_tilde_shifted[2:end, :, :], zeros(1, N_μ, N_ν), conj.(W_tilde_shifted[end:-1:1, :, :]))
-    W_tilde = cat(W_tilde_shifted[1:end, :, :], zeros(1, N_μ, N_ν), conj.(W_tilde_shifted[end:-1:2, :, :]); dims = 1)
-
-    return W_tilde
-end
-
-function W_tilde_at_q(w_k_hat::AbstractMatrix, ζ_1_hat, ζ_2_hat, l, L)
-    return 1 / (l * L) * (ζ_1_hat' * (w_k_hat * ζ_2_hat))
 end
 
 """
@@ -277,23 +169,6 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_
     return W_tilde
 end
 
-function create_W_workspace1d(N_v, N_c, N_k, N_ν, N_μ)
-    P = plan_fft(complex(zeros(2 * N_k, N_μ, N_ν)), 1)
-    P_inv = inv(P)
-    X = complex(zeros(N_v, N_c, N_k))
-    B = complex(zeros(N_ν, N_c, N_k))
-    C = complex(zeros(N_k, N_μ, N_ν))
-    C_padded = complex(zeros(2 * N_k, N_μ, N_ν))
-    C_transformed = complex(zeros(2 * N_k, N_μ, N_ν))
-    D_large = complex(zeros(2 * N_k, N_μ, N_ν))
-    D_small = complex(zeros(N_k, N_μ, N_ν))
-    E = complex(zeros(N_ν, N_c, N_k))
-    F = complex(zeros(N_v, N_c, N_k))
-    W_workspace = (P, P_inv, X, B, C, C_padded, C_transformed, D_large, D_small, E, F)
-
-    return W_workspace
-end
-
 function create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
     N_k = prod(N_ks)
     p = plan_fft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
@@ -312,23 +187,6 @@ function create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
     w_tilde_reshaped = complex(zeros(N_qs))
     w_tilde_hat = complex(zeros(N_qs))
     W_workspace = (p, p_back, X, B, C, D, E, F, c_reshaped, c_padded, d_reshaped, d_padded, c_transformed, w_tilde_reshaped, w_tilde_hat, N_ks, N_qs)
-
-    return W_workspace
-end
-
-function create_W_workspace_fast(N_v, N_c, N_k, N_ν, N_μ)
-    P = plan_fft(complex(zeros(2 * N_k, N_μ, N_ν)), 1)
-    P_back = plan_bfft(complex(zeros(2 * N_k, N_μ, N_ν)), 1)
-    X = complex(zeros(N_v, N_c))
-    B = complex(zeros(N_ν, N_c))
-    C = complex(zeros(N_μ, N_ν))
-    C_padded = complex(zeros(2 * N_k, N_μ, N_ν))
-    C_transformed = complex(zeros(2 * N_k, N_μ, N_ν))
-    D_large = complex(zeros(2 * N_k, N_μ, N_ν))
-    D = complex(zeros(N_μ, N_ν))
-    E = complex(zeros(N_ν, N_c))
-    F = complex(zeros(N_v, N_c))
-    W_workspace = (P, P_back, X, B, C, C_padded, C_transformed, D_large, D, E, F)
 
     return W_workspace
 end
@@ -422,31 +280,6 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     return vec(E)
 end
 
-# matrix free W TODO: combine with 3d version?
-function W_times_vector1d(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
-    N_k = size(u_v_vv_conj, 3)
-    N_v = size(u_v_vv_conj, 2)
-    N_c = size(u_c_cc, 2)
-    P, P_inv, X, B, C, C_padded, C_transformed, D_large, D_small, E, F = W_workspace
-
-    X[:] .= x
-    @views for jk in 1:N_k
-        mul!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
-        mul!(C[jk, :, :], u_c_cc[:, :, jk], transpose(B[:, :, jk]))
-    end
-    C_padded[1:N_k, :, :] .= C
-    mul!(C_transformed, P, C_padded)
-    C_transformed .*= W_tilde_hat
-    mul!(D_large, P_inv, C_transformed)
-    D_small .= @view D_large[1:N_k, :, :]
-    @views for ik in 1:N_k
-        mul!(E[:, :, ik], transpose(D_small[ik, :, :]), conj.(u_c_cc[:, :, ik]))
-        mul!(F[:, :, ik], adjoint(u_v_vv_conj[:, :, ik]), E[:, :, ik])
-    end
-
-    return copy(vec(F))
-end
-
 function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     N_v = size(u_v_vv_conj, 2)
     N_c = size(u_c_cc, 2)
@@ -474,35 +307,6 @@ function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     end
 
     return copy(vec(F))
-end
-
-#TODO: remove/combine with optimizations in 3d version
-function W_times_vector_fast!(y, x, W_tilde_hat, u_v_vv_conj, u_c_cc, u_c_cc_conj, W_workspace)
-    N_μ = size(W_tilde_hat, 2)
-    N_ν = size(W_tilde_hat, 3)
-    N_k = length(u_v_vv_conj)
-    N_v = size(u_v_vv_conj[1], 2)
-    N_c = size(u_c_cc[1], 2)
-
-    P, P_back, X, B, C, C_padded, C_transformed, D_large, D, E, F = W_workspace
-
-    for jk in 1:N_k
-        X[:] .= @view(x[(N_v * N_c * (jk - 1) + 1):(N_v * N_c * jk)])
-        mul!(B, u_v_vv_conj[jk], X)
-        mul!(C, u_c_cc[jk], transpose(B))
-        C_padded[jk, :, :] .= C
-    end
-    mul!(C_transformed, P, C_padded)
-    C_transformed .*= (1 / (2 * N_k)) .* W_tilde_hat
-    mul!(D_large, P_back, C_transformed)
-    for ik in 1:N_k
-        D .= @view(D_large[mod1(ik - 1, 2 * N_k), :, :])
-        mul!(E, transpose(D), u_c_cc_conj[ik])
-        mul!(F, adjoint(u_v_vv_conj[ik]), E)
-        y[(N_v * N_c * (ik - 1) + 1):(N_v * N_c * ik)] .= @view(F[:])
-    end
-
-    return y
 end
 
 """
