@@ -231,12 +231,6 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
 
     return b
 end
-function w_conv!(b, w, a)
-    return w_conv!(b, w, a, zeros(w), zeros(w), zeros(w), zeros(w), plan_fft(zeros(w)), plan_bfft(zeros(w)))
-end
-function w_conv(w, a)
-    return w_conv!(similar(a), w, a)
-end
 
 # TODO what to do with the reference implementation? move to interface code?
 function w_conv_reference!(b, w, a)
@@ -254,10 +248,6 @@ function w_conv_reference!(b, w, a)
     end
 
     return b
-end
-function w_conv_reference(w, a)
-    b = similar(a)
-    return w_conv_reference!(b, w, a)
 end
 
 """
@@ -299,6 +289,11 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     return vec(E)
 end
 
+"""
+    W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
+
+Compute the product of ``W`` and `x`.
+"""
 function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     N_v = size(u_v_vv_conj, 2)
     N_c = size(u_c_cc, 2)
