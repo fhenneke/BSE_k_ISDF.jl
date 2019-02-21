@@ -184,7 +184,7 @@ end
 
 # reference implementations for testing
 
-function V_entry(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
+function V_entry_realspace(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
     N_unit = size(u_v, 1)
     N_cells = div(length(r_super), N_unit)
     Δr = r_super[2] - r_super[1]
@@ -215,6 +215,137 @@ function V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
     v = 1 / L * U_vc_1_hat' * (v_hat[:, 1] .* U_vc_2_hat)
 
     return v
+end
+
+function W_entry_realspace(W, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+    N_unit = size(u_v, 1)
+    N_cells = div(length(r_super), N_unit)
+    Δr = r_super[2] - r_super[1]
+    l = N_unit * Δr
+    L = N_cells * l
+
+    w = complex(0.)
+    for (ir, r_1) in enumerate(r_super)
+        for (jr, r_2) in enumerate(r_unit)
+            w += (conj(u_c[mod1(ir, N_unit), ic, ik]) * u_c[mod1(ir, N_unit), jc, jk]) *
+                exp(-im * (k_bz[ik] - k_bz[jk]) * (r_1 - r_2)) * W(r_1, r_2, l, L) *
+                (conj(u_v[jr, jv, jk]) * u_v[jr, iv, ik])
+        end
+    end
+    return Δr^2 * w / N_cells
+end
+
+function W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+    N_unit = length(r_unit)
+    N_cells = div(length(r_super), N_unit)
+    N_k = length(k_bz)
+    Δr = r_unit[2] - r_unit[1]
+    l = N_unit * Δr
+    L = N_cells * l
+
+    ijk = mod1(ik - jk + 1, N_k)
+    if ik - jk >= div(N_k, 2)
+        G_shift = -1
+    elseif ik - jk < -div(N_k, 2)
+        G_shift = 1
+    else
+        G_shift = 0
+    end
+
+    U_c_hat_shift = circshift(fft(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk])), -G_shift) * (l / N_unit)
+    U_v_hat_shift = circshift(fft(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk])), -G_shift) * (l / N_unit)
+
+    w = 1 / (l * L) * U_c_hat_shift' * (@view(w_hat[:, :, ijk]) * U_v_hat_shift)
+
+    return w
+end
+
+function H_entry_realspace(V, W, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
+    (E_c[ic, ik] - E_v[iv, ik]) * (iv == jv) * (ic == jc) * (ik == jk) +
+        2 * V_entry_realspace(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit) -
+        W_entry_realspace(W, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+end
+
+function H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
+    (E_c[ic, ik] - E_v[iv, ik]) * (iv == jv) * (ic == jc) * (ik == jk) +
+        2 * V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit) -
+        W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+end
+
+function assemble_exact_V_1d(prob)
+    r_super = prob.prob.r_super
+    r_unit = prob.prob.r_unit
+    N_v = prob.N_v
+    N_c = prob.N_c
+    N_k = prob.N_k
+    u_v = prob.u_v
+    u_c = prob.u_c
+    v_hat = prob.v_hat
+
+    V_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
+    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+        V_reshaped[iv, ic, ik, jv, jc, jk] =
+            V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
+    end
+    V = reshape(V_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
+    for i in 1:(N_v * N_c * N_k)
+        V[i, i] = real(V[i, i])
+    end
+
+    return V
+end
+
+function assemble_exact_W_1d(prob)
+    r_super = prob.prob.r_super
+    r_unit = prob.prob.r_unit
+    k_bz = prob.prob.k_bz
+    N_v = prob.N_v
+    N_c = prob.N_c
+    N_k = prob.N_k
+    u_v = prob.u_v
+    u_c = prob.u_c
+    w_hat = prob.w_hat
+
+    W_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
+    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+        W_reshaped[iv, ic, ik, jv, jc, jk] =
+            W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+    end
+    W = reshape(W_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
+    for i in 1:(N_v * N_c * N_k)
+        W[i, i] = real(W[i, i])
+    end
+
+    return W
+end
+
+function assemble_exact_H_1d(prob)
+    r_super = prob.prob.r_super
+    r_unit = prob.prob.r_unit
+    k_bz = prob.prob.k_bz
+    N_v = prob.N_v
+    N_c = prob.N_c
+    N_k = prob.N_k
+    E_v = prob.E_v
+    E_c = prob.E_c
+    u_v = prob.u_v
+    u_c = prob.u_c
+    v_hat = prob.v_hat
+    w_hat = prob.w_hat
+
+    H_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
+    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+        if N_v * N_c * (ik - 1) + N_v * (ic - 1) + iv <= N_v * N_c * (jk - 1) + N_v * (jc - 1) + jv # exploit symmetry
+            H_reshaped[iv, ic, ik, jv, jc, jk] =
+                H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
+        end
+    end
+    H = reshape(H_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
+    for i in 1:(N_v * N_c * N_k)
+        H[i, i] = real(H[i, i])
+    end
+
+    return Hermitian(H)
 end
 
 # TODO: remove this special case for 1D?

@@ -1,46 +1,14 @@
 # BSE Hamiltonian
-using FFTW, LinearMaps
+using FFTW, LinearMaps, ProgressMeter
 
 # only for consitency checks
-function V_entry(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
-    N_unit = size(u_v, 1)
-    N_cells = div(length(r_super), N_unit)
-    Δr = r_super[2] - r_super[1]
-    L = N_cells * N_unit * Δr
 
-    v = complex(0.)
-    for (ir, r_1) in enumerate(r_super)
-        for (jr, r_2) in enumerate(r_unit)
-            diff_r = supercell_difference(r_1, r_2, L)
-            v += (conj(u_c[mod1(ir, N_unit), ic, ik]) * u_v[mod1(ir, N_unit), iv, ik]) *
-                V(diff_r, 0.) *
-                (conj(u_v[jr, jv, jk]) * u_c[jr, jc, jk])
-        end
-    end
-    return Δr^2 * v / N_cells
-end
-
-function V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
-    N_unit = length(r_unit)
-    N_cells = div(length(r_super), N_unit)
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    U_vc_1_hat = fft(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik])) * (l / N_unit)
-    U_vc_2_hat = fft(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk])) * (l / N_unit)
-
-    v = 1 / L * U_vc_1_hat' * (v_hat[:, 1] .* U_vc_2_hat)
-
-    return v
-end
-
-function V_entry_3d(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
-    N_unit = prod(N_rs)
+function V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
+    N_r = prod(N_rs)
     N_k = prod(N_ks)
 
-    U_vc_1_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
-    U_vc_2_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
+    U_vc_1_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
+    U_vc_2_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
 
     v = 1 / (Ω0_vol * N_k) * U_vc_1_hat' * (v_hat .* U_vc_2_hat)
 
@@ -48,19 +16,18 @@ function V_entry_3d(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks
 end
 
 function assemble_exact_V(prob)
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-    u_v = prob.u_v
-    u_c = prob.u_c
-    v_hat = prob.v_hat
+    N_v, N_c, N_k = size(prob)
+    N_rs = size_r(prob)
+    N_ks = size_k(prob)
+    Ω0_vol = Ω0_volume(prob)
+    u_v, u_c = orbitals(prob)
+
+    v_hat = compute_v_hat(prob)
 
     V_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+    @showprogress 1 "Assemble exact V ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
         V_reshaped[iv, ic, ik, jv, jc, jk] =
-            V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
+            V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
     end
     V = reshape(V_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
     for i in 1:(N_v * N_c * N_k)
@@ -70,57 +37,14 @@ function assemble_exact_V(prob)
     return V
 end
 
-function W_entry(W, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-    N_unit = size(u_v, 1)
-    N_cells = div(length(r_super), N_unit)
-    Δr = r_super[2] - r_super[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    w = complex(0.)
-    for (ir, r_1) in enumerate(r_super)
-        for (jr, r_2) in enumerate(r_unit)
-            w += (conj(u_c[mod1(ir, N_unit), ic, ik]) * u_c[mod1(ir, N_unit), jc, jk]) *
-                exp(-im * (k_bz[ik] - k_bz[jk]) * (r_1 - r_2)) * W(r_1, r_2, l, L) *
-                (conj(u_v[jr, jv, jk]) * u_v[jr, iv, ik])
-        end
-    end
-    return Δr^2 * w / N_cells
-end
-
-function W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-    N_unit = length(r_unit)
-    N_cells = div(length(r_super), N_unit)
-    N_k = length(k_bz)
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    ijk = mod1(ik - jk + 1, N_k)
-    if ik - jk >= div(N_k, 2)
-        G_shift = -1
-    elseif ik - jk < -div(N_k, 2)
-        G_shift = 1
-    else
-        G_shift = 0
-    end
-
-    U_c_hat_shift = circshift(fft(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk])), -G_shift) * (l / N_unit)
-    U_v_hat_shift = circshift(fft(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk])), -G_shift) * (l / N_unit)
-
-    w = 1 / (l * L) * U_c_hat_shift' * (@view(w_hat[:, :, ijk]) * U_v_hat_shift)
-
-    return w
-end
-
-function W_entry_3d(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
-    N_unit = prod(N_rs)
+function W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
+    N_r = prod(N_rs)
     N_k = size(ikkp2iq, 1)
 
     iq = ikkp2iq[ik, jk]
 
-    U_c_hat = Ω0_vol / N_unit * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
-    U_v_hat = Ω0_vol / N_unit * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
+    U_c_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
+    U_v_hat = Ω0_vol / N_r * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
 
     G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
     w = 1 / (Ω0_vol^2 * N_k) *
@@ -130,20 +54,21 @@ function W_entry_3d(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp
 end
 
 function assemble_exact_W(prob)
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    k_bz = prob.prob.k_bz
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-    u_v = prob.u_v
-    u_c = prob.u_c
+    N_v, N_c, N_k = size(prob)
+    N_rs = size_r(prob)
+    N_ks = size_k(prob)
+    Ω0_vol = Ω0_volume(prob)
+    u_v, u_c = orbitals(prob)
+
     w_hat = prob.w_hat
+    ikkp2iq = ikkp2iq_matrix(prob.k_bz, prob.q_2bz)
+    q_2bz_ind = prob.q_2bz_ind
+    q_2bz_shift = prob.q_2bz_shift
 
     W_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+    @showprogress 1 "Assemble exact W ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
         W_reshaped[iv, ic, ik, jv, jc, jk] =
-            W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+            W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
     end
     W = reshape(W_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
     for i in 1:(N_v * N_c * N_k)
@@ -151,47 +76,6 @@ function assemble_exact_W(prob)
     end
 
     return W
-end
-
-function H_entry(V, W, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
-    (E_c[ic, ik] - E_v[iv, ik]) * (iv == jv) * (ic == jc) * (ik == jk) +
-        2 * V_entry(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit) -
-        W_entry(W, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-end
-
-function H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
-    (E_c[ic, ik] - E_v[iv, ik]) * (iv == jv) * (ic == jc) * (ik == jk) +
-        2 * V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit) -
-        W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-end
-
-function assemble_exact_H(prob)
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    k_bz = prob.prob.k_bz
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-    E_v = prob.E_v
-    E_c = prob.E_c
-    u_v = prob.u_v
-    u_c = prob.u_c
-    v_hat = prob.v_hat
-    w_hat = prob.w_hat
-
-    H_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
-        if N_v * N_c * (ik - 1) + N_v * (ic - 1) + iv <= N_v * N_c * (jk - 1) + N_v * (jc - 1) + jv # exploit symmetry
-            H_reshaped[iv, ic, ik, jv, jc, jk] =
-                H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
-        end
-    end
-    H = reshape(H_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
-    for i in 1:(N_v * N_c * N_k)
-        H[i, i] = real(H[i, i])
-    end
-
-    return Hermitian(H)
 end
 
 ###############################################################################
@@ -284,9 +168,9 @@ function assemble_V_tilde1d(v_hat, ζ_vc, r_super, r_unit)
 end
 
 """
-    assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_r_1, N_r_2, N_r_3, N_k)
+    assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
 
-Assembles a Matrix representation of `V` in the basis given by interpolation vectors of the ISDF.
+Assembles a Matrix representation of ``V`` in the basis given by interpolation vectors of the ISDF.
 """
 function assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
     N_r = size(ζ_vc, 1)
@@ -349,6 +233,13 @@ function setup_W(prob::BSEProblem1D, isdf)
     return W
 end
 
+"""
+    setup_W(prob, isdf)
+
+Create a linear operator for the application of `W` to a vector.
+The result is a hermitian `LinearMap` of size
+`(N_v * N_c * N_K, N_v * N_c * N_k)`.
+"""
 function setup_W(prob::BSEProblemExciting, isdf)
     w_hat = prob.w_hat
     q_2bz_ind = prob.q_2bz_ind
@@ -414,6 +305,11 @@ function W_tilde_at_q(w_k_hat::AbstractMatrix, ζ_1_hat, ζ_2_hat, l, L)
     return 1 / (l * L) * (ζ_1_hat' * (w_k_hat * ζ_2_hat))
 end
 
+"""
+    G_vector_to_index(G, N_rs)
+
+Return the index `i` such that `fftfreq(N_rs...)[:, i] == G`.
+"""
 function G_vector_to_index(G, N_rs) # TODO: make fast for all dimensions
     if length(G) == 3
         ind = mod1(G[1] + 1, N_rs[1]) + N_rs[1] * (mod1(G[2] + 1, N_rs[2]) - 1) + N_rs[1] * N_rs[2] * (mod1(G[3] + 1, N_rs[3]) - 1)
@@ -426,6 +322,11 @@ function G_vector_to_index(G, N_rs) # TODO: make fast for all dimensions
     return ind
 end
 
+"""
+    assemble_W_tildew_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+
+Assembles a Matrix representation of ``W`` in the basis given by interpolation vectors of the ISDF.
+"""
 function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
     N_r = size(ζ_vv, 1)
     N_ν = size(ζ_vv, 2)
@@ -443,6 +344,7 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_
 
     W_tilde = complex(zeros(N_q, N_μ, N_ν))
 
+    # TODO: can this be written in terms of more general data structures as W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) * ζ_cc_hat' * w_hat[iq] * ζ_vv_hat?
     for iq in 1:N_q
         G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
         W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) *
@@ -587,8 +489,8 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
         for ic in 1:N_c
             for iv in 1:N_v
                 E[iv, ic, ik] = 0.
-                for μ in 1:N_μ
-                    E[iv, ic, ik] += conj(u_c_vc[μ, ic, ik] * u_v_vc_conj[μ, iv, ik]) * D[μ]
+                for iμ in 1:N_μ
+                    E[iv, ic, ik] += conj(u_c_vc[iμ, ic, ik] * u_v_vc_conj[iμ, iv, ik]) * D[iμ]
                 end
             end
         end
@@ -680,6 +582,13 @@ function W_times_vector_fast!(y, x, W_tilde_hat, u_v_vv_conj, u_c_cc, u_c_cc_con
     return y
 end
 
+"""
+    setup_H(prob, isdf)
+
+Create a linear operator for the application of ``H = D + 2 V - W``
+to a vector. The result is a hermitian `LinearMap` of size
+`(N_v * N_c * N_K, N_v * N_c * N_k)`.
+"""
 function setup_H(prob, isdf)
     D = setup_D(prob)
     V = setup_V(prob, isdf)
