@@ -7,7 +7,7 @@ using Revise # remove after debugging
 using BSE_k_ISDF, LinearAlgebra
 
 # %% bse problem type
-example_path = "diamond/333_20/"
+example_path = "diamond/333_20_test/"
 
 N_1d = 20 # TODO: read from file
 N_rs = (N_1d, N_1d, N_1d)
@@ -31,6 +31,8 @@ u_v, u_c = BSE_k_ISDF.orbitals(prob)
 @test size(E_c) == (N_c, N_k)
 @test size(u_v) == (N_r, N_v, N_k)
 @test size(u_c) == (N_r, N_c, N_k)
+@test sqrt(BSE_k_ISDF.Ω0_volume(prob) / N_r) * norm(u_v[:, end, 1]) ≈ 1 atol=0.001 # relatively large error, should they be normalized by hand?
+@test sqrt(BSE_k_ISDF.Ω0_volume(prob) / N_r) * norm(u_c[:, 1, 1]) ≈ 1 atol=0.001
 
 a_mat = BSE_k_ISDF.lattice_matrix(prob)
 rl = BSE_k_ISDF.r_lattice(prob)
@@ -50,14 +52,16 @@ kc = BSE_k_ISDF.k_cartesian(prob, b_mat * shift)
 @test size(kc) == (3, N_k)
 @test kc[:, 1] ≈ b_mat * kl[:, 1]
 
-fft_frequencies = BSE_k_ISDF.fftfreq(2, 3, 4)
+fft_frequencies = BSE_k_ISDF.fftfreq(N_rs...)
 
-@test size(fft_frequencies) == (3, 2 * 3 * 4)
+@test size(fft_frequencies) == (3, N_r)
 @test fft_frequencies[:, 1] == [0, 0, 0]
-@test fft_frequencies[:, 2] == [-1, 0, 0]
-@test fft_frequencies[:, 3] == [0, 1, 0]
-@test fft_frequencies[:, end - 1] == [0, -1, -1]
+@test fft_frequencies[:, N_rs[1]] == [-1, 0, 0]
+@test fft_frequencies[:, N_rs[1] + 1] == [0, 1, 0]
 @test fft_frequencies[:, end] == [-1, -1, -1]
+for iG in 1:N_r
+    @test BSE_k_ISDF.G_vector_to_index(Int.(fft_frequencies[:, iG]), N_rs) == iG
+end
 
 # ISDF
 N_μ_vvs = ((3, 3, 3), 50)
