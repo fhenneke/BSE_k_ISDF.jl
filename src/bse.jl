@@ -1,85 +1,6 @@
 # BSE Hamiltonian
 using FFTW, LinearMaps, ProgressMeter
 
-# only for consitency checks
-
-function V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
-    N_r = prod(N_rs)
-    N_k = prod(N_ks)
-
-    U_vc_1_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
-    U_vc_2_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
-
-    v = 1 / (Ω0_vol * N_k) * U_vc_1_hat' * (v_hat .* U_vc_2_hat)
-
-    return v
-end
-
-function assemble_exact_V(prob)
-    N_v, N_c, N_k = size(prob)
-    N_rs = size_r(prob)
-    N_ks = size_k(prob)
-    Ω0_vol = Ω0_volume(prob)
-    u_v, u_c = orbitals(prob)
-
-    v_hat = compute_v_hat(prob)
-
-    V_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    @showprogress 1 "Assemble exact V ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
-        V_reshaped[iv, ic, ik, jv, jc, jk] =
-            V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
-    end
-    V = reshape(V_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
-    for i in 1:(N_v * N_c * N_k)
-        V[i, i] = real(V[i, i])
-    end
-
-    return V
-end
-
-function W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
-    N_r = prod(N_rs)
-    N_k = size(ikkp2iq, 1)
-
-    iq = ikkp2iq[ik, jk]
-
-    U_c_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
-    U_v_hat = Ω0_vol / N_r * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
-
-    G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
-    w = 1 / (Ω0_vol^2 * N_k) *
-        U_c_hat[G_shift_indices]' * (w_hat[q_2bz_ind[iq]][1] * U_v_hat[G_shift_indices])
-
-    return w
-end
-
-function assemble_exact_W(prob)
-    N_v, N_c, N_k = size(prob)
-    N_rs = size_r(prob)
-    N_ks = size_k(prob)
-    Ω0_vol = Ω0_volume(prob)
-    u_v, u_c = orbitals(prob)
-
-    w_hat = prob.w_hat
-    ikkp2iq = ikkp2iq_matrix(prob.k_bz, prob.q_2bz)
-    q_2bz_ind = prob.q_2bz_ind
-    q_2bz_shift = prob.q_2bz_shift
-
-    W_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    @showprogress 1 "Assemble exact W ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
-        W_reshaped[iv, ic, ik, jv, jc, jk] =
-            W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
-    end
-    W = reshape(W_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
-    for i in 1:(N_v * N_c * N_k)
-        W[i, i] = real(W[i, i])
-    end
-
-    return W
-end
-
-###############################################################################
-
 # methods for setting up the matrix free Hamiltonian
 """
     setup_D(prob)
@@ -596,4 +517,82 @@ function setup_H(prob, isdf)
     V = setup_V(prob, isdf)
     W = setup_W(prob, isdf)
     return D + 2 * V - W
+end
+
+###############################################################################
+
+# only for consitency checks
+function V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
+    N_r = prod(N_rs)
+    N_k = prod(N_ks)
+
+    U_vc_1_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
+    U_vc_2_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
+
+    v = 1 / (Ω0_vol * N_k) * U_vc_1_hat' * (v_hat .* U_vc_2_hat)
+
+    return v
+end
+
+function assemble_exact_V(prob)
+    N_v, N_c, N_k = size(prob)
+    N_rs = size_r(prob)
+    N_ks = size_k(prob)
+    Ω0_vol = Ω0_volume(prob)
+    u_v, u_c = orbitals(prob)
+
+    v_hat = compute_v_hat(prob)
+
+    V_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
+    @showprogress 1 "Assemble exact V ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+        V_reshaped[iv, ic, ik, jv, jc, jk] =
+            V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
+    end
+    V = reshape(V_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
+    for i in 1:(N_v * N_c * N_k)
+        V[i, i] = real(V[i, i])
+    end
+
+    return V
+end
+
+function W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
+    N_r = prod(N_rs)
+    N_k = size(ikkp2iq, 1)
+
+    iq = ikkp2iq[ik, jk]
+
+    U_c_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
+    U_v_hat = Ω0_vol / N_r * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
+
+    G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
+    w = 1 / (Ω0_vol^2 * N_k) *
+        U_c_hat[G_shift_indices]' * (w_hat[q_2bz_ind[iq]][1] * U_v_hat[G_shift_indices])
+
+    return w
+end
+
+function assemble_exact_W(prob)
+    N_v, N_c, N_k = size(prob)
+    N_rs = size_r(prob)
+    N_ks = size_k(prob)
+    Ω0_vol = Ω0_volume(prob)
+    u_v, u_c = orbitals(prob)
+
+    w_hat = prob.w_hat
+    ikkp2iq = ikkp2iq_matrix(prob.k_bz, prob.q_2bz)
+    q_2bz_ind = prob.q_2bz_ind
+    q_2bz_shift = prob.q_2bz_shift
+
+    W_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
+    @showprogress 1 "Assemble exact W ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+        W_reshaped[iv, ic, ik, jv, jc, jk] =
+            W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
+    end
+    W = reshape(W_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
+    for i in 1:(N_v * N_c * N_k)
+        W[i, i] = real(W[i, i])
+    end
+
+    return W
 end
