@@ -169,6 +169,13 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_
     return W_tilde
 end
 
+"""
+    create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
+
+Allocates momory for efficiently computing the application of ``W`` to
+a vector. The output is a 17-tuple of FFTW plans, arrays of different
+dimension and sizes, and tuples.
+"""
 function create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
     N_k = prod(N_ks)
     p = plan_fft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
@@ -192,6 +199,14 @@ function create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
 end
 
 # MIT licensed via julia
+"""
+    w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
+
+Compute the convolution of `w` and `a` and store it in `b`. The
+functions uses Fourier transforms in the form of FFTW forward and
+backward plans `p` and `p_back`. The array `a` is zero padded to the
+size of `w`.
+"""
 function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     dim = ndims(a)
     sa = size(a)
@@ -245,7 +260,11 @@ function w_conv_reference(w, a)
     return w_conv_reference!(b, w, a)
 end
 
-# matrix free V
+"""
+    V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
+
+Compute the product of ``V`` and `x`.
+"""
 function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     N_μ = size(V_tilde, 1)
     N_k = size(u_v_vc_conj, 3)
@@ -326,6 +345,12 @@ end
 ###############################################################################
 
 # only for consitency checks
+"""
+    V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
+
+Compute the matrix entry in ``V`` corresponding to the multiindex
+`(iv ic ik, jv jc jk)`.
+"""
 function V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
     N_r = prod(N_rs)
     N_k = prod(N_ks)
@@ -338,6 +363,12 @@ function V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
     return v
 end
 
+"""
+    assemble_exact_V(prob)
+
+Assemble the full matrix for ``V``. The entries are computed using the function `V_entry`.
+This should only be used for very small problems.
+"""
 function assemble_exact_V(prob)
     N_v, N_c, N_k = size(prob)
     N_rs = size_r(prob)
@@ -360,6 +391,13 @@ function assemble_exact_V(prob)
     return V
 end
 
+"""
+    W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
+
+Compute the matrix entry in ``V`` corresponding to the multiindex
+`(iv ic ik, jv jc jk)`. This method is not effient for large problems
+since `ikkp2iq` is quadratic in `N_k`.
+"""
 function W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq, q_2bz_ind, q_2bz_shift)
     N_r = prod(N_rs)
     N_k = size(ikkp2iq, 1)
@@ -376,6 +414,12 @@ function W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq
     return w
 end
 
+"""
+    assemble_exact_W(prob)
+
+Assemble the full matrix for ``W``. The entries are computed using the function `W_entry`.
+This should only be used for very small problems.
+"""
 function assemble_exact_W(prob)
     N_v, N_c, N_k = size(prob)
     N_rs = size_r(prob)
