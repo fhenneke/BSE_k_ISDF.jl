@@ -91,16 +91,28 @@ D = BSE_k_ISDF.setup_D(prob)
 
 V = BSE_k_ISDF.setup_V(prob, isdf)
 V_dense = Matrix(V)
+V_exact = BSE_k_ISDF.assemble_exact_V(prob)
 
 @test size(V) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test ishermitian(V)
 @test V_dense ≈ V_dense'
+@test norm(V_dense - V_exact) / norm(V_exact) < 0.05
 
 W = BSE_k_ISDF.setup_W(prob, isdf)
-# W_dense = Matrix(W)
-W_dense_new = Matrix(W)
-@test W_dense ≈ W_dense_new
+W_dense = Matrix(W)
+W_exact = BSE_k_ISDF.assemble_exact_W(prob)
 
 @test size(W) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test ishermitian(W)
-@test all(abs.(W_dense .- W_dense') .< 2e-4) #TODO: find out why this error is so large!
+@test isapprox(W_dense, W_dense', atol = 1e-2) # TODO: find out why this error is so large!
+@test isapprox(W_dense, W_exact, atol=3e-2) # TODO: check how this error becomes smaller for increased number of interpolation points
+
+H = BSE_k_ISDF.setup_H(prob, isdf)
+H_dense = Matrix(H)
+H_exact = D + 2 * V_exact - W_exact
+
+@test size(H) == (N_v * N_c * N_k, N_v * N_c * N_k)
+@test ishermitian(H)
+@test isapprox(H_dense, H_dense', atol = 1e-2)
+@test H_dense ≈ D + 2 * V_dense - W_dense
+@test isapprox(H_dense, H_exact, atol=4e-2)

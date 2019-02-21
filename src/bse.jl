@@ -131,13 +131,9 @@ function setup_V(prob::BSEProblemExciting, isdf::ISDF)
     N_rs = size_r(prob)
     N_v, N_c, N_k = size(prob)
     Ω0_vol = Ω0_volume(prob)
-
     N_μ = size(isdf)[3]
-    ζ_vc = interpolation_vectors(isdf)[3]
 
-    v_hat = compute_v_hat(prob)
-
-    V_tilde = assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
+    V_tilde = assemble_V_tilde(prob, isdf)
     V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
 
     u_v_vc_conj = conj.(interpolation_coefficients(isdf)[3])
@@ -168,16 +164,22 @@ function assemble_V_tilde1d(v_hat, ζ_vc, r_super, r_unit)
 end
 
 """
-    assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
+    assemble_V_tilde(prob, isdf)
 
 Assembles a Matrix representation of ``V`` in the basis given by interpolation vectors of the ISDF.
 """
-function assemble_V_tilde(v_hat, ζ_vc, Ω0_vol, N_rs, N_k)
-    N_r = size(ζ_vc, 1)
+function assemble_V_tilde(prob, isdf)
+    N_rs = size_r(prob)
+    N_r = prod(N_rs)
+    N_k = size(prob)[3]
+    Ω0_vol = Ω0_volume(prob)
+    ζ_vc = interpolation_vectors(isdf)[3]
+
+    v_hat = compute_v_hat(prob)
 
     ζ_vc_hat = zeros(Complex{Float64}, size(ζ_vc))
     for iμ in 1:size(ζ_vc, 2)
-        ζ_vc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_vc[:, iμ], N_r)))
+        ζ_vc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_vc[:, iμ], N_rs)))
     end
 
     V_tilde = 1 / (Ω0_vol * N_k) * ζ_vc_hat' * (v_hat .* ζ_vc_hat)

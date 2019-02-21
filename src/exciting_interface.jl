@@ -312,3 +312,45 @@ function ikkp2iq_matrix(k_bz, q_2bz)
     end
     return ikkp2iq
 end
+
+#TODO: maybe include this in the tests
+function read_reference(prob)
+    N_v, N_c, N_k = size(prob)
+    f = h5open(example_path * "bse_matrix.h5")
+
+    reordered_indices = vec(permutedims(reshape(1:(N_c * N_v * N_k), N_c, N_v, N_k), [2, 1, 3]))
+
+    H_reference = read(f["H_BSE"])[1, reordered_indices, reordered_indices] - im * read(f["H_BSE"])[2, reordered_indices, reordered_indices]
+
+    V_reference_reordered = zeros(Complex{Float64}, N_c * N_v * N_k, N_c * N_v * N_k)
+    V_reshaped = reshape(V_reference_reordered, N_c * N_v, N_k, N_c * N_v, N_k)
+    n = 1
+    for ik in 1:N_k
+        for jk in ik:N_k
+            V_reshaped[:, ik, :, jk] = read(f, "0001/EXCLI_BSE-BAR_QMT001.OUT/" * lpad(string(n), 6, string(0)))[1, :, :] - im * read(f, "0001/EXCLI_BSE-BAR_QMT001.OUT/" * lpad(string(n), 6, string(0)))[2, :, :]
+            n += 1
+        end
+    end
+    V_reference = V_reference_reordered[reordered_indices, reordered_indices]
+    for i in 1:size(V_reference, 1)
+        V_reference[i, i] = real(V_reference[i, i])
+    end
+
+    W_reference_reordered = zeros(Complex{Float64}, N_c * N_v * N_k, N_c * N_v * N_k)
+    W_reshaped = reshape(W_reference_reordered, N_c * N_v, N_k, N_c * N_v, N_k)
+    n = 1
+    for ik in 1:N_k
+        for jk in ik:N_k
+            W_reshaped[:, ik, :, jk] = read(f, "0001/SCCLI_QMT001.OUT/" * lpad(string(n), 6, string(0)))[1, :, :] - im * read(f, "0001/SCCLI_QMT001.OUT/" * lpad(string(n), 6, string(0)))[2, :, :]
+            n += 1
+        end
+    end
+    W_reference = W_reference_reordered[reordered_indices, reordered_indices]
+    for i in 1:size(W_reference, 1)
+        W_reference[i, i] = real(W_reference[i, i])
+    end
+
+    close(f)
+
+    return H_reference, Hermitian(V_reference), Hermitian(W_reference)
+end
