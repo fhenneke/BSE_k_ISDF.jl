@@ -13,7 +13,7 @@ abstract type for AbstractBSEProblems
     -   energies
     -   orbitals
     -   lattice_vectors
-    -
+    -   optical_absorption_vector
 """
 abstract type AbstractBSEProblem end
 
@@ -202,4 +202,13 @@ function fftfreq(n1, n2, n3)
     F3 = kron(f3, ones(n2), ones(n1))
 
     return vcat(F1', F2', F3')
+end
+
+"""
+    optical_absorption_vector(prob, direction)
+
+Compute the optical absorption vector in along the the direction `a_mat[:, direction]`.
+"""
+function optical_absorption_vector(prob::AbstractBSEProblem, direction)
+    error("not implemented yet")
 end

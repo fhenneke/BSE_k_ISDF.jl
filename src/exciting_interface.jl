@@ -32,6 +32,8 @@ mutable struct BSEProblemExciting <: AbstractBSEProblem
     q_2bz_shift
     w_hat
     gqmax
+
+    pmat
 end
 
 function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
@@ -55,7 +57,9 @@ function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
     N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat = read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     gqmax = parse(Float64, attribute(root(input_xml)["xs"][1], "gqmax"))
 
-    return BSEProblemExciting(input_xml, N_rs, r_lattice, r_cartesian, a_mat, Ω0_vol, atoms, N_ks, k_bz, b_mat, BZ_vol, E_v, E_c, u_v, u_c, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat, gqmax)
+    pmat = read_pmat(N_core, N_v, N_c, N_k, path)
+
+    return BSEProblemExciting(input_xml, N_rs, r_lattice, r_cartesian, a_mat, Ω0_vol, atoms, N_ks, k_bz, b_mat, BZ_vol, E_v, E_c, u_v, u_c, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat, gqmax, pmat)
 end
 
 function read_r_points_k_points(N_rs, path) # TODO: make into type constructor
@@ -185,6 +189,21 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     return N_ks, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat
 end
 
+function read_pmat(N_core, N_v, N_c, N_k, path)
+    pmat = zeros(Complex{Float64}, N_v * N_c * N_k, 3)
+    pmat_reshaped = reshape(pmat, N_v, N_c, N_k, 3)
+
+    file = h5open(path * "/bse_output.h5", "r")
+    for ik in 1:N_k
+        pmat_block = permutedims(read(file, "pmat/" * lpad(string(ik), 4, string(0)) * "/pmat/"), [3, 4, 2, 1])
+        pmat_reshaped[:, :, ik, :] = pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 1] -
+                                im * pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 2]
+    end
+    close(file)
+
+    return pmat
+end
+
 function size(prob::BSEProblemExciting)
     return (size(prob.E_v, 1), size(prob.E_c, 1), prod(prob.N_ks))
 end
@@ -213,19 +232,10 @@ function compute_v_hat(prob::BSEProblemExciting)
     return compute_v_hat(prob, prob.gqmax)
 end
 
-function read_pmat(N_core, N_v, N_c, N_k, path)
-    pmat = zeros(Complex{Float64}, N_v * N_c * N_k, 3)
-    pmat_reshaped = reshape(pmat, N_v, N_c, N_k, 3)
-
-    file = h5open(path * "/bse_output.h5", "r")
-    for ik in 1:N_k
-        pmat_block = permutedims(read(file, "pmat/" * lpad(string(ik), 4, string(0)) * "/pmat/"), [3, 4, 2, 1])
-        pmat_reshaped[:, :, ik, :] = pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 1] -
-                                im * pmat_block[(N_core + 1):(N_core + N_v), (N_core + N_v + 1):(N_core + N_v + N_c), :, 2]
-    end
-    close(file)
-
-    return pmat
+function optical_absorption_vector(prob::BSEProblemExciting, direction)
+    N_v, N_c, N_k = size(prob)
+    ev = vec([prob.E_c[ic, ik] - prob.E_v[iv, ik] for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k])
+    return prob.pmat[:, direction] ./ ev
 end
 
 function find_r_μ(prob::BSEProblemExciting, N_μ_irs, N_μ_mt)
