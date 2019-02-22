@@ -167,7 +167,6 @@ Erange = E_min:0.001:E_max
 
 d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
 scaling = norm(d)^2 * 8 * π^2 / (Ω0_vol * N_k)
-oscillator_strength = [dot(d, ef[:, i]) / norm(d) for i in 1:size(ef, 2)]
 
 optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, direction, N_iter, g, Erange)
 optical_absorption_dense_lanc = BSE_k_ISDF.lanczos_optical_absorption(H_dense, d, N_iter, g, Erange, scaling)
