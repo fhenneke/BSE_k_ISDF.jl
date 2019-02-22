@@ -191,12 +191,12 @@ optical_absorption_exact_lanc = BSE_k_ISDF.lanczos_optical_absorption(H_exact, d
 ev_dense, ef_dense = eigen(H_dense)
 ev_dense = real.(ev_dense)
 oscillator_strength_dense = [dot(d, ef_dense[:, i]) / norm(d) for i in 1:size(ef_dense, 2)]
-optical_absorption_dense_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_dense, ef_dense, abs2.(oscillator_strength_dense), g, Erange, scaling)
+optical_absorption_dense_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_dense, abs2.(oscillator_strength_dense), g, Erange, scaling)
 
 ev_exact, ef_exact = eigen(H_exact)
 ev_exact = real.(ev_exact)
 oscillator_strength_exact = [dot(d, ef_exact[:, i]) / norm(d) for i in 1:size(ef_exact, 2)]
-optical_absorption_exact_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_exact, ef_exact, abs2.(oscillator_strength_exact), g, Erange, scaling)
+optical_absorption_exact_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_exact, abs2.(oscillator_strength_exact), g, Erange, scaling)
 
 @test optical_absorption_lanc ≈ optical_absorption_dense_lanc
 @test isapprox(optical_absorption_lanc, optical_absorption_exact_lanc, rtol = 5e-2)
