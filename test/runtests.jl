@@ -34,6 +34,16 @@ u_v, u_c = BSE_k_ISDF.orbitals(prob)
 @test sqrt(BSE_k_ISDF.Ω0_volume(prob) / N_r) * norm(u_v[:, end, 1]) ≈ 1 atol=0.001 # relatively large error, should they be normalized by hand?
 @test sqrt(BSE_k_ISDF.Ω0_volume(prob) / N_r) * norm(u_c[:, 1, 1]) ≈ 1 atol=0.001
 
+# test periodicity, test if boundary value is close to mean over the neighbors
+for u_i in [u_v, u_c]
+    u_i_reshaped = reshape(u_i[:, 1, 1], N_rs)
+    N_rs_position = div.(N_rs, 2)
+
+    @test isapprox(u_i_reshaped[1, N_rs_position[2], N_rs_position[3]], 0.5 * (u_i_reshaped[2, N_rs_position[2], N_rs_position[3]] + u_i_reshaped[end, N_rs_position[2], N_rs_position[3]]), rtol = 1e-1)
+    @test isapprox(u_i_reshaped[N_rs_position[1], 1, N_rs_position[3]], 0.5 * (u_i_reshaped[N_rs_position[1], 2, N_rs_position[3]] + u_i_reshaped[N_rs_position[1], end, N_rs_position[3]]), rtol = 1e-1)
+    @test isapprox(u_i_reshaped[N_rs_position[1], N_rs_position[2], 1], 0.5 * (u_i_reshaped[N_rs_position[1], N_rs_position[2], 2] + u_i_reshaped[N_rs_position[1], N_rs_position[2], end]), rtol = 2e-1)
+end
+
 a_mat = BSE_k_ISDF.lattice_matrix(prob)
 rl = BSE_k_ISDF.r_lattice(prob)
 rc = BSE_k_ISDF.r_cartesian(prob)
@@ -81,13 +91,14 @@ N_μ_vv, N_μ_cc, N_μ_vc = BSE_k_ISDF.size(isdf)
 @test size(u_v_vc) == (N_μ_vc, N_v, N_k)
 @test size(u_c_vc) == (N_μ_vc, N_c, N_k)
 
+
+
 # Hamiltonian
 D = BSE_k_ISDF.setup_D(prob)
 @test size(D) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test isdiag(D)
 @test D[1, 1] == E_c[1, 1] - E_v[1, 1]
 @test D[2, 2] == E_c[1, 1] - E_v[2, 1]
-@test D[1, 2] == 0
 
 V = BSE_k_ISDF.setup_V(prob, isdf)
 V_dense = Matrix(V)
