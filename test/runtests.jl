@@ -24,6 +24,7 @@ prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path)
 # test energies and orbitals
 E_v, E_c = BSE_k_ISDF.energies(prob)
 u_v, u_c = BSE_k_ISDF.orbitals(prob)
+Ω0_vol = BSE_k_ISDF.Ω0_volume(prob)
 
 @test BSE_k_ISDF.size(prob) == (N_v, N_c, N_k)
 @test BSE_k_ISDF.size_k(prob) == N_ks
@@ -32,8 +33,8 @@ u_v, u_c = BSE_k_ISDF.orbitals(prob)
 @test size(E_c) == (N_c, N_k)
 @test size(u_v) == (N_r, N_v, N_k)
 @test size(u_c) == (N_r, N_c, N_k)
-@test sqrt(BSE_k_ISDF.Ω0_volume(prob) / N_r) * norm(u_v[:, end, 1]) ≈ 1 atol=0.001 # relatively large error, should they be normalized by hand?
-@test sqrt(BSE_k_ISDF.Ω0_volume(prob) / N_r) * norm(u_c[:, 1, 1]) ≈ 1 atol=0.001
+@test sqrt(Ω0_vol / N_r) * norm(u_v[:, end, 1]) ≈ 1 atol=0.001 # relatively large error, should they be normalized by hand?
+@test sqrt(Ω0_vol / N_r) * norm(u_c[:, 1, 1]) ≈ 1 atol=0.001
 
 # test periodicity, test if boundary value is close to mean over the neighbors
 for u_i in [u_v, u_c]
@@ -154,3 +155,35 @@ H_exact = D + 2 * V_exact - W_exact
 @test isapprox(H_dense, H_dense', atol = 1e-2)
 @test H_dense ≈ D + 2 * V_dense - W_dense
 @test isapprox(H_dense, H_exact, atol=4e-2)
+
+# absorption spectrum
+
+direction = 1
+N_iter = 50
+σ = 0.0055
+g = ω -> 1 / π * σ / (ω^2 + σ^2)
+E_min, E_max = 0.0, 1.0
+Erange = E_min:0.001:E_max
+
+d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
+scaling = norm(d)^2 * 8 * π^2 / (Ω0_vol * N_k)
+oscillator_strength = [dot(d, ef[:, i]) / norm(d) for i in 1:size(ef, 2)]
+
+optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, direction, N_iter, g, Erange)
+optical_absorption_dense_lanc = BSE_k_ISDF.lanczos_optical_absorption(H_dense, d, N_iter, g, Erange, scaling)
+optical_absorption_exact_lanc = BSE_k_ISDF.lanczos_optical_absorption(H_exact, d, N_iter, g, Erange, scaling)
+
+ev_dense, ef_dense = eigen(H_dense)
+ev_dense = real.(ev_dense)
+oscillator_strength_dense = [dot(d, ef_dense[:, i]) / norm(d) for i in 1:size(ef_dense, 2)]
+optical_absorption_dense_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_dense, ef_dense, abs2.(oscillator_strength_dense), g, Erange, scaling)
+
+ev_exact, ef_exact = eigen(H_exact)
+ev_exact = real.(ev_exact)
+oscillator_strength_exact = [dot(d, ef_exact[:, i]) / norm(d) for i in 1:size(ef_exact, 2)]
+optical_absorption_exact_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_exact, ef_exact, abs2.(oscillator_strength_exact), g, Erange, scaling)
+
+@test optical_absorption_lanc ≈ optical_absorption_dense_lanc
+@test isapprox(optical_absorption_lanc, optical_absorption_exact_lanc, rtol = 3e-2)
+@test isapprox(optical_absorption_lanc, optical_absorption_dense_eig, rtol = 5e-2)
+@test isapprox(optical_absorption_dense_eig, optical_absorption_exact_eig, rtol = 3e-2)
