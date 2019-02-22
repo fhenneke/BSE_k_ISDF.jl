@@ -121,24 +121,7 @@ function setup_W(prob::BSEProblemExciting, isdf)
 end
 
 """
-    G_vector_to_index(G, N_rs)
-
-Return the index `i` such that `fftfreq(N_rs...)[:, i] == G`.
-"""
-function G_vector_to_index(G, N_rs) # TODO: make fast for all dimensions
-    if length(G) == 3
-        ind = mod1(G[1] + 1, N_rs[1]) + N_rs[1] * (mod1(G[2] + 1, N_rs[2]) - 1) + N_rs[1] * N_rs[2] * (mod1(G[3] + 1, N_rs[3]) - 1)
-    else
-        ind = mod1(G[1] + 1, N_rs[1])
-        for id in 2:length(G)
-            ind += prod(N_rs[1:(id - 1)]) * (mod1(G[id] + 1, N_rs[id]) - 1)
-        end
-    end
-    return ind
-end
-
-"""
-    assemble_W_tildew_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+    assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
 
 Assembles a Matrix representation of ``W`` in the basis given by interpolation vectors of the ISDF.
 """
