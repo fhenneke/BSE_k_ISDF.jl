@@ -601,3 +601,19 @@ function optical_absorption(ev, ef, u_v, u_c, E_v, E_c, r_unit, k_bz, g, Erange)
 
     return absorption
 end
+
+function lanczos_optical_absorption1d(prob::AbstractBSEProblem, isdf::ISDF, N_iter, g, Erange) #TODO: adapt to 3d
+    l = prob.prob.l
+
+    H = setup_H(prob, isdf)
+    d = optical_absorption_vector(prob)
+    ev_lanczos, ef_lanczos = lanczos_eig(H, normalize(d), N_iter)
+
+    optical_absorption = zeros(length(Erange))
+    for j in 1:(2 * N_iter - 1)
+        optical_absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
+    end
+    optical_absorption .*= norm(d)^2 * 8 * π^2 / l
+
+    return optical_absorption
+end

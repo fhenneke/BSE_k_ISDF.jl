@@ -43,6 +43,12 @@ function lanczos(A, u_init, k, M = I)
     return α, β, U
 end
 
+"""
+    lanczos_eig(H, d, N_iter)
+
+Compute eigenvalues and eigenvectors of an approximation of `H` based
+on `N_iter` steps of Lanczos method with initial vector `d`.
+"""
 function lanczos_eig(H, d, N_iter)
     α, β, U = lanczos(H, d, N_iter)
     return lanczos_eig(α, β, N_iter)
@@ -55,34 +61,39 @@ function lanczos_eig(α::AbstractVector, β, N_iter)
     return ev_lanczos, ef_lanczos
 end
 
-function lanczos_optical_absorption(prob::AbstractBSEProblem, isdf::ISDF, N_iter, g, Erange) #TODO: adapt to 3d
-    l = prob.prob.l
+"""
+    lanczos_optical_absorption(prob, isdf, direction, N_iter, g, Erange)
+
+Compute the optical absorption function of `prob` in direction
+`a_mat[i]` using `N_iter` steps of a Lanczos method. The absorption
+spectrum is computed on the points in `Erange` and the function `g`
+is used for broadening.
+"""
+function lanczos_optical_absorption(prob::AbstractBSEProblem, isdf::ISDF, direction, N_iter, g, Erange)
+    Ω0_vol = Ω0_volume(prob)
+    N_k = size(prob)[3]
 
     H = setup_H(prob, isdf)
-    d = optical_absorption_vector(prob)
-    ev_lanczos, ef_lanczos = lanczos_eig(H, normalize(d), N_iter)
+    d = optical_absorption_vector(prob, direction)
 
-    optical_absorption = zeros(length(Erange))
-    for j in 1:(2 * N_iter - 1)
-        optical_absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
-    end
-    optical_absorption .*= norm(d)^2 * 8 * π^2 / l
-
-    return optical_absorption
+    return lanczos_optical_absorption(H, d, N_iter, g, Erange, norm(d)^2 * 8 * π^2 / (Ω0_vol * N_k))
 end
 
-function lanczos_optical_absorption(α::AbstractVector, β, N_iter, g, Erange) # TODO: unify with matrix, vector function below?
+function lanczos_optical_absorption(H, d, N_iter, g, Erange, scaling)
+    α, β, U = lanczos(H, normalize(d), N_iter)
+    return lanczos_optical_absorption(α, β, N_iter, g, Erange, scaling)
+end
+
+function lanczos_optical_absorption(α::AbstractVector, β, N_iter, g, Erange, scaling)
     ev_lanczos, ef_lanczos = lanczos_eig(α, β, N_iter)
-
-    optical_absorption = zeros(length(Erange))
-    for j in 1:(2 * N_iter - 1)
-        optical_absorption .+= abs2(ef_lanczos[1, j]) * g.(Erange .- ev_lanczos[j])
-    end
-
-    return optical_absorption
+    return lanczos_optical_absorption(ev_lanczos, ef_lanczos, abs2.(ef_lanczos[1, :]), g, Erange, scaling)
 end
 
-function lanczos_optical_absorption(H, d, N_iter, g, Erange)
-    α, β, U = lanczos(H, d, N_iter)
-    return lanczos_optical_absorption(α, β, N_iter, g, Erange)
+function lanczos_optical_absorption(ev::AbstractVector, ef::AbstractMatrix, weights::AbstractVector, g, Erange, scaling)
+    optical_absorption = zeros(length(Erange))
+    for j in 1:length(ev)
+        optical_absorption .+= weights[j] * g.(Erange .- ev[j])
+    end
+    optical_absorption .*= scaling
+    return optical_absorption
 end
