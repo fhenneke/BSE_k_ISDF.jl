@@ -319,7 +319,8 @@ end
 
 ###############################################################################
 
-# only for consitency checks
+# Some methods which are only used for consitency checks in the tests.
+
 """
     V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
 
