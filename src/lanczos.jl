@@ -86,7 +86,7 @@ end
 
 function lanczos_optical_absorption(α::AbstractVector, β, N_iter, g, Erange, scaling)
     ev_lanczos, ef_lanczos = lanczos_eig(α, β, N_iter)
-    return lanczos_optical_absorption(ev_lanczos, ef_lanczos, abs2.(ef_lanczos[1, :]), g, Erange, scaling)
+    return lanczos_optical_absorption(ev_lanczos, abs2.(ef_lanczos[1, :]), g, Erange, scaling)
 end
 
 function lanczos_optical_absorption(ev::AbstractVector, weights::AbstractVector, g, Erange, scaling)
