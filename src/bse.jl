@@ -202,10 +202,13 @@ end
 """
     w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
 
-Compute the convolution of `w` and `a` and store it in `b`. The
-functions uses Fourier transforms in the form of FFTW forward and
-backward plans `p` and `p_back`. The array `a` is zero padded to the
-size of `w`.
+Compute the convolution of `w` and `a` and store it in `b`. This means
+
+``b_i = \sum_j a_j w_{i - j + 1}``
+
+with periodic `w`. The function uses Fourier transforms in the form
+of FFTW forward and backward plans `p` and `p_back`. The array `a` is
+zero padded to the size of `w`.
 """
 function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     dim = ndims(a)
@@ -223,22 +226,6 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     mul!(bp, p_back, cp)
 
     copyto!(b, indices, bp, indices)
-
-    return b
-end
-
-# TODO what to do with the reference implementation? move to interface code?
-function w_conv_reference!(b, w, a)
-    dim = ndims(a)
-    sa = size(a)
-    sw = size(w)
-
-    for i in CartesianIndices(sa)
-        b[i] = zero(eltype(b))
-        for j in CartesianIndices(sa)
-            b[i] += w[CartesianIndex(mod1.((i - j).I .+ 1, sw))] * a[j]
-        end
-    end
 
     return b
 end

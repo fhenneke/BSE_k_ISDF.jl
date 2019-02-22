@@ -4,7 +4,7 @@ push!(LOAD_PATH, "/home/felix/Work/Research/Code")
 cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
 
 using Revise # remove after debugging
-using BSE_k_ISDF, LinearAlgebra
+using BSE_k_ISDF, LinearAlgebra, FFTW
 
 # %% bse problem type
 example_path = "diamond/333_20_test/"
@@ -91,7 +91,32 @@ N_μ_vv, N_μ_cc, N_μ_vc = BSE_k_ISDF.size(isdf)
 @test size(u_v_vc) == (N_μ_vc, N_v, N_k)
 @test size(u_c_vc) == (N_μ_vc, N_c, N_k)
 
+# test the convolution with padding
+function w_conv_reference!(b, w, a)
+    dim = ndims(a)
+    sa = size(a)
+    sw = size(w)
 
+    for i in CartesianIndices(sa)
+        b[i] = zero(eltype(b))
+        for j in CartesianIndices(sa)
+            b[i] += w[CartesianIndex(mod1.((i - j).I .+ 1, sw))] * a[j]
+        end
+    end
+
+    return b
+end
+conv_size = (9, 11, 13)
+a = rand(Complex{Float64}, conv_size)
+w = rand(Complex{Float64}, 2 .* conv_size)
+b = rand(Complex{Float64}, conv_size)
+ap = zeros(Complex{Float64}, 2 .* conv_size)
+bp = zeros(Complex{Float64}, 2 .* conv_size)
+cp = zeros(Complex{Float64}, 2 .* conv_size)
+w_hat = zeros(Complex{Float64}, 2 .* conv_size)
+p = plan_fft(bp)
+p_back = plan_bfft(bp)
+@test w_conv_reference!(b, w, a) ≈ BSE_k_ISDF.w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
 
 # Hamiltonian
 D = BSE_k_ISDF.setup_D(prob)
