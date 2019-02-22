@@ -5,7 +5,7 @@
 
 Stores information on interpolations vectors and interpolated values.
 The arrays `ζ_ij` and `u_ij` are chosen such that approximately
-`u_i ≈ ζ_ij * u_i`.
+`u_i u_j ≈ ζ_ij * u_i_ij u_j_ij`.
 """
 struct ISDF
     N_μ_vv #TODO: remove this information?
@@ -51,7 +51,9 @@ function interpolation_coefficients(isdf::ISDF)
     return isdf.u_v_vv, isdf.u_c_cc, isdf.u_v_vc, isdf.u_c_vc
 end
 
-function ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, u_v, u_c)
+function ISDF(prob::AbstractBSEProblem, r_μ_vv_indices::AbstractVector, r_μ_cc_indices::AbstractVector, r_μ_vc_indices::AbstractVector)
+    u_v, u_c = orbitals(prob)
+
     ζ_vv = assemble_ζ(u_v, r_μ_vv_indices)
     ζ_cc = assemble_ζ(u_c, r_μ_cc_indices)
     ζ_vc = assemble_ζ(u_v, u_c, r_μ_vc_indices)
@@ -63,13 +65,33 @@ function ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, u_v, u_c)
         ζ_vv, ζ_cc, ζ_vc)
 end
 
-"""
-    find_r_μ(N_unit, N_μ)
+function ISDF(prob::AbstractBSEProblem, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
+    u_v, u_c = orbitals(prob)
 
-Helper function to select `N_μ` points uniformly from the range `1:N_unit`.
+    r_μ_vv_indices = find_r_μ(prob, N_μ_vv)
+    r_μ_cc_indices = find_r_μ(prob, N_μ_cc)
+    r_μ_vc_indices = find_r_μ(prob, N_μ_vc)
+
+    return ISDF(prob, r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices)
+end
+
 """
-function find_r_μ(N_unit::Int, N_μ::Int)
-    r_μ_indices = Int.(round.(range(1, stop = N_unit + 1, length = N_μ + 1)[1:(end - 1)]))
+    find_r_μ(prob, N_μ)
+
+Return an array of `N_μ` indices corresponding to interpolation
+points in the unit cell.
+"""
+function find_r_μ(prob::AbstractBSEProblem, N_μ::Int)
+    # generic implementation chooses pseudo random points
+    N_rs = size_r(prob)
+    N_r = prod(N_rs)
+
+    r_mask = zeros(Bool, N_rs)
+    shifts = (sqrt(2), sqrt(3), sqrt(5))
+    for i in 1:N_μ
+        r_mask[CartesianIndex(ceil.(Int, mod.(i .* shifts, 1.0) .* N_rs))] = true
+    end
+    r_μ_indices = findall(vec(r_mask))
     return r_μ_indices
 end
 

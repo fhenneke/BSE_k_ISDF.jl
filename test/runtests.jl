@@ -78,14 +78,25 @@ end
 
 # ISDF
 N_μ_vvs = ((3, 3, 3), 50)
-N_μ_ccs = ((4, 4, 4), 60)
-N_μ_vcs = ((3, 3, 3), 70)
-isdf = BSE_k_ISDF.ISDF(prob, N_μ_vvs, N_μ_ccs, N_μ_vcs)
+N_μ_ccs = ((4, 4, 4), 130)
+N_μ_vcs = ((3, 3, 3), 51)
+N_μ_vv, N_μ_cc, N_μ_vc = 3^3 + 50, 4^3 + 130, 3^3 + 51
+@test BSE_k_ISDF.find_r_μ(prob, N_μ_vvs[1],  N_μ_vvs[2]) == BSE_k_ISDF.find_r_μ(prob, N_μ_vv)
+@test BSE_k_ISDF.find_r_μ(prob, N_μ_ccs[1],  N_μ_ccs[2]) == BSE_k_ISDF.find_r_μ(prob, N_μ_cc)
+@test BSE_k_ISDF.find_r_μ(prob, N_μ_vcs[1],  N_μ_vcs[2]) == BSE_k_ISDF.find_r_μ(prob, N_μ_vc)
+
+@test BSE_k_ISDF.find_r_μ_uniform(9, 9) == 1:9
+@test BSE_k_ISDF.find_r_μ_uniform(10, 5) == 1:2:10
+for i in 1:11
+    @test length(BSE_k_ISDF.find_r_μ_uniform(11, i)) == i
+end
+
+isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
 ζ_vv, ζ_cc, ζ_vc = BSE_k_ISDF.interpolation_vectors(isdf)
 u_v_vv, u_c_cc, u_v_vc, u_c_vc = BSE_k_ISDF.interpolation_coefficients(isdf)
 N_μ_vv, N_μ_cc, N_μ_vc = BSE_k_ISDF.size(isdf)
 
-@test (N_μ_vv, N_μ_cc, N_μ_vc) == (78, 122, 92)
+@test BSE_k_ISDF.size(isdf) == (N_μ_vv, N_μ_cc, N_μ_vc)
 @test size(ζ_vv) == (N_r, N_μ_vv)
 @test size(ζ_cc) == (N_r, N_μ_cc)
 @test size(ζ_vc) == (N_r, N_μ_vc)
@@ -135,7 +146,8 @@ V_exact = BSE_k_ISDF.assemble_exact_V(prob)
 @test size(V) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test ishermitian(V)
 @test V_dense ≈ V_dense'
-@test norm(V_dense - V_exact) / norm(V_exact) < 0.05
+@test isapprox(V_dense, V_exact, atol = 2e-2)
+@test isapprox(V_dense, V_exact, rtol = 7e-2)
 
 W = BSE_k_ISDF.setup_W(prob, isdf)
 W_dense = Matrix(W)
@@ -143,8 +155,10 @@ W_exact = BSE_k_ISDF.assemble_exact_W(prob)
 
 @test size(W) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test ishermitian(W)
-@test isapprox(W_dense, W_dense', atol = 1e-2) # TODO: find out why this error is so large!
-@test isapprox(W_dense, W_exact, atol=3e-2) # TODO: check how this error becomes smaller for increased number of interpolation points
+@test isapprox(W_dense, W_dense', atol = 9e-3) # TODO: find out why this error is so large!
+@test isapprox(W_dense, W_dense', rtol = 2e-2)
+@test isapprox(W_dense, W_exact, atol=2e-2) # TODO: check how this error becomes smaller for increased number of interpolation points
+@test isapprox(W_dense, W_exact, rtol=2e-2)
 
 H = BSE_k_ISDF.setup_H(prob, isdf)
 H_dense = Matrix(H)
@@ -152,9 +166,11 @@ H_exact = D + 2 * V_exact - W_exact
 
 @test size(H) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test ishermitian(H)
-@test isapprox(H_dense, H_dense', atol = 1e-2)
+@test isapprox(H_dense, H_dense', atol = 9e-3)
+@test isapprox(H_dense, H_dense', rtol = 5e-4)
 @test H_dense ≈ D + 2 * V_dense - W_dense
-@test isapprox(H_dense, H_exact, atol=4e-2)
+@test isapprox(H_dense, H_exact, atol=5e-2)
+@test isapprox(H_dense, H_exact, rtol=3e-3)
 
 # absorption spectrum
 
@@ -183,6 +199,6 @@ oscillator_strength_exact = [dot(d, ef_exact[:, i]) / norm(d) for i in 1:size(ef
 optical_absorption_exact_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_exact, ef_exact, abs2.(oscillator_strength_exact), g, Erange, scaling)
 
 @test optical_absorption_lanc ≈ optical_absorption_dense_lanc
-@test isapprox(optical_absorption_lanc, optical_absorption_exact_lanc, rtol = 3e-2)
+@test isapprox(optical_absorption_lanc, optical_absorption_exact_lanc, rtol = 5e-2)
 @test isapprox(optical_absorption_lanc, optical_absorption_dense_eig, rtol = 5e-2)
-@test isapprox(optical_absorption_dense_eig, optical_absorption_exact_eig, rtol = 3e-2)
+@test isapprox(optical_absorption_dense_eig, optical_absorption_exact_eig, rtol = 2e-2)
