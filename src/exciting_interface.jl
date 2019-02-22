@@ -315,7 +315,7 @@ function ISDF(prob::BSEProblemExciting, N_μ_vvs::Tuple, N_μ_ccs, N_μ_vcs)
     r_μ_cc_indices = find_r_μ(prob, N_μ_ccs[1], N_μ_ccs[2])
     r_μ_vc_indices = find_r_μ(prob, N_μ_vcs[1], N_μ_vcs[2])
 
-    return ISDF(r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices, prob.u_v, prob.u_c)
+    return ISDF(prob, r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices)
 end
 
 #TODO: maybe include this in the tests
