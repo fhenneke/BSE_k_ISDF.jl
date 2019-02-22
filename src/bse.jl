@@ -204,7 +204,7 @@ end
 
 Compute the convolution of `w` and `a` and store it in `b`. This means
 
-``b_i = \sum_j a_j w_{i - j + 1}``
+``b_i = \\sum_j a_j w_{i - j + 1}``
 
 with periodic `w`. The function uses Fourier transforms in the form
 of FFTW forward and backward plans `p` and `p_back`. The array `a` is
