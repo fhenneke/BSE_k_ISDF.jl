@@ -21,6 +21,7 @@ prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path)
 
 @test typeof(prob) <: BSE_k_ISDF.AbstractBSEProblem
 
+# test energies and orbitals
 E_v, E_c = BSE_k_ISDF.energies(prob)
 u_v, u_c = BSE_k_ISDF.orbitals(prob)
 
@@ -44,6 +45,7 @@ for u_i in [u_v, u_c]
     @test isapprox(u_i_reshaped[N_rs_position[1], N_rs_position[2], 1], 0.5 * (u_i_reshaped[N_rs_position[1], N_rs_position[2], 2] + u_i_reshaped[N_rs_position[1], N_rs_position[2], end]), rtol = 2e-1)
 end
 
+# test lattice
 a_mat = BSE_k_ISDF.lattice_matrix(prob)
 rl = BSE_k_ISDF.r_lattice(prob)
 rc = BSE_k_ISDF.r_cartesian(prob)
