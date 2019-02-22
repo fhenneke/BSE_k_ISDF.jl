@@ -1,7 +1,14 @@
 # lanczos absorption
 using ProgressMeter
 
-function lanczos(A, u_init, M, k)
+"""
+    lanczos(A, u_init, k[, M])
+
+Perform k steps of Lanczos method for the operator `A` and initial
+vector `u_init`. The output are the vectors `α`, `β` and `U` with
+`A * U ≈ U * SymTridiagonal(α, β[1:(end - 1)])`.
+"""
+function lanczos(A, u_init, k, M = I)
     α = zeros(k)
     β = zeros(k)
     u = copy(u_init)
@@ -37,7 +44,7 @@ function lanczos(A, u_init, M, k)
 end
 
 function lanczos_eig(H, d, N_iter)
-    α, β, U = lanczos(H, d, I, N_iter)
+    α, β, U = lanczos(H, d, N_iter)
     return lanczos_eig(α, β, N_iter)
 end
 
@@ -96,7 +103,7 @@ function lanczos_optical_absorption(α::AbstractVector, β, N_iter, g, Erange) #
 end
 
 function lanczos_optical_absorption(H, d, N_iter, g, Erange)
-    α, β, U = lanczos(H, d, I, N_iter)
+    α, β, U = lanczos(H, d, N_iter)
     return lanczos_optical_absorption(α, β, N_iter, g, Erange)
 end
 
