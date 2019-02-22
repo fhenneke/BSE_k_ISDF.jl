@@ -1,5 +1,5 @@
-# types for problems and solutions, mainly containers
-# TODO: rename to bse_type.jl?
+# type for abstract bse problem. mainly contains infos on methods
+# which have to implemented by this type
 
 import Base.size
 
