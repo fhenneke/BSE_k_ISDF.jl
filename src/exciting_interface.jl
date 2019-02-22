@@ -299,30 +299,6 @@ function ISDF(prob::BSEProblemExciting, N_μs)
     return ISDF(prob, N_μs, N_μs, N_μs)
 end
 
-# TODO: check if this is still necessary for tests
-"""
-input: 2d array of k points (size (d, N_k))
-       2d array of k point differences (size (d, 2^d * N_k))
-
-output: 2d array of integers
-
-    resultgin matrix such that the entry l = ikkp2iq[i, j] satisfies k_i - k_j == q_l
-
-    not linear in the number of k points, only used for the consistency check
-    which use the elementwise W
-"""
-function ikkp2iq_matrix(k_bz, q_2bz)
-    N_k = size(k_bz, 2)
-    ikkp2iq = zeros(Int, N_k, N_k)
-    for ik in 1:N_k
-        for jk in 1:N_k
-            k_diff = k_bz[:, ik] - k_bz[:, jk]
-            ikkp2iq[ik, jk] = findfirst(vec(prod(abs.(k_diff .- q_2bz) .< 1e-3; dims=1)))
-        end
-    end
-    return ikkp2iq
-end
-
 #TODO: maybe include this in the tests
 function read_reference(prob)
     N_v, N_c, N_k = size(prob)

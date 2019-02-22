@@ -420,3 +420,22 @@ function assemble_exact_W(prob)
 
     return W
 end
+
+"""
+    ikkp2iq_matrix(k_bz, q_2bz)
+
+Compute the all indices in `q_bz` corresponding to differences of points in `k_bz`. The resulting matrix is such that the entry `l = ikkp2iq[i, j]` satisfies `k_bz[i] - k_bz[j] == q_2bz[l]`.
+
+This method is not effient for large problems since it is quadratic in `N_k`.
+"""
+function ikkp2iq_matrix(k_bz, q_2bz)
+    N_k = size(k_bz, 2)
+    ikkp2iq = zeros(Int, N_k, N_k)
+    for ik in 1:N_k
+        for jk in 1:N_k
+            k_diff = k_bz[:, ik] - k_bz[:, jk]
+            ikkp2iq[ik, jk] = findfirst(vec(prod(abs.(k_diff .- q_2bz) .< 1e-3; dims=1)))
+        end
+    end
+    return ikkp2iq
+end
