@@ -92,7 +92,9 @@ end
 function lanczos_optical_absorption(ev::AbstractVector, weights::AbstractVector, g, Erange, scaling)
     optical_absorption = zeros(length(Erange))
     for j in 1:length(ev)
-        optical_absorption .+= weights[j] * g.(Erange .- ev[j])
+        if ev[j] >= 0
+            optical_absorption .+= weights[j] .* (g.(Erange .- ev[j]) .- g.(Erange .+ ev[j]))
+        end
     end
     optical_absorption .*= scaling
     return optical_absorption

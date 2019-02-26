@@ -202,3 +202,7 @@ optical_absorption_exact_eig = BSE_k_ISDF.lanczos_optical_absorption(ev_exact, a
 @test isapprox(optical_absorption_lanc, optical_absorption_exact_lanc, rtol = 5e-2)
 @test isapprox(optical_absorption_lanc, optical_absorption_dense_eig, rtol = 5e-2)
 @test isapprox(optical_absorption_dense_eig, optical_absorption_exact_eig, rtol = 2e-2)
+
+# resonant and antiresonant peaks, cancellation close to zero
+@test BSE_k_ISDF.lanczos_optical_absorption([0.01], [1.0], g, Erange, 1.0) ≈ g.(Erange .- 0.01) .- g.(Erange .+ 0.01)
+@test BSE_k_ISDF.lanczos_optical_absorption([0.01], [1.0], g, Erange, 1.0)[1] == 0.0
