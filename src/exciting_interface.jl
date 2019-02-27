@@ -150,15 +150,15 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     q_points_out = readdlm(path * "/QPOINTS_SCR.OUT")
     q_bz = float.(transpose(q_points_out[2:end, 2:4]))
 
-    N_k_diffs = 2 .* N_ks
+    N_k_diffs = (n -> n == 1 ? 1 : 2 * n).(N_ks) #double size unless size is 1
 
     # alternative q grid [0, 1[ ∪ [-1, 0[
-    q_grid_1 = vcat(range(0, stop = 1, length = N_ks[1] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[1] + 1)[1:(end - 1)])
-    q_grid_2 = vcat(range(0, stop = 1, length = N_ks[2] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[2] + 1)[1:(end - 1)])
-    q_grid_3 = vcat(range(0, stop = 1, length = N_ks[3] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[3] + 1)[1:(end - 1)])
-    q_2bz = transpose(hcat(kron(ones(2 * N_ks[3]), ones(2 * N_ks[2]), q_grid_1),
-                           kron(ones(2 * N_ks[3]), q_grid_2, ones(2 * N_ks[1])),
-                           kron(q_grid_3, ones(2 * N_ks[2]), ones(2 * N_ks[1])))
+    q_grid_1 = vcat(range(0, stop = 1, length = N_ks[1] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[1] + 1)[(end - (N_k_diffs[1] - N_ks[1])):(end - 1)])
+    q_grid_2 = vcat(range(0, stop = 1, length = N_ks[2] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[2] + 1)[(end - (N_k_diffs[2] - N_ks[2])):(end - 1)])
+    q_grid_3 = vcat(range(0, stop = 1, length = N_ks[3] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[3] + 1)[(end - (N_k_diffs[3] - N_ks[3])):(end - 1)])
+    q_2bz = transpose(hcat(kron(ones(N_k_diffs[3]), ones(N_k_diffs[2]), q_grid_1),
+                           kron(ones(N_k_diffs[3]), q_grid_2, ones(N_k_diffs[1])),
+                           kron(q_grid_3, ones(N_k_diffs[2]), ones(N_k_diffs[1])))
                      )
     N_k_diff = size(q_2bz, 2)
 

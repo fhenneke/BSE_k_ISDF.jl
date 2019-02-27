@@ -120,19 +120,34 @@ function w_conv_reference!(b, w, a)
 
     return b
 end
+
 conv_size = (9, 11, 13)
+double_conv_size = (18, 22, 26)
 a = rand(Complex{Float64}, conv_size)
-w = rand(Complex{Float64}, 2 .* conv_size)
+w = rand(Complex{Float64}, double_conv_size)
 b = rand(Complex{Float64}, conv_size)
-ap = zeros(Complex{Float64}, 2 .* conv_size)
-bp = zeros(Complex{Float64}, 2 .* conv_size)
-cp = zeros(Complex{Float64}, 2 .* conv_size)
-w_hat = zeros(Complex{Float64}, 2 .* conv_size)
+ap = zeros(Complex{Float64}, double_conv_size)
+bp = zeros(Complex{Float64}, double_conv_size)
+cp = zeros(Complex{Float64}, double_conv_size)
+w_hat = zeros(Complex{Float64}, double_conv_size)
 p = plan_fft(bp)
 p_back = plan_bfft(bp)
 @test w_conv_reference!(b, w, a) ≈ BSE_k_ISDF.w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
 
-# Hamiltonian
+conv_size = (9, 11, 1) # convolution for 2d k point set
+double_conv_size = (18, 22, 1)
+a = rand(Complex{Float64}, conv_size)
+w = rand(Complex{Float64}, double_conv_size)
+b = rand(Complex{Float64}, conv_size)
+ap = zeros(Complex{Float64}, double_conv_size)
+bp = zeros(Complex{Float64}, double_conv_size)
+cp = zeros(Complex{Float64}, double_conv_size)
+w_hat = zeros(Complex{Float64}, double_conv_size)
+p = plan_fft(bp)
+p_back = plan_bfft(bp)
+@test w_conv_reference!(b, w, a) ≈ BSE_k_ISDF.w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
+
+# %% Hamiltonian
 D = BSE_k_ISDF.setup_D(prob)
 @test size(D) == (N_v * N_c * N_k, N_v * N_c * N_k)
 @test isdiag(D)
