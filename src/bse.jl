@@ -31,7 +31,7 @@ function setup_V(prob::BSEProblemExciting, isdf::ISDF)
     N_μ = size(isdf)[3]
 
     V_tilde = assemble_V_tilde(prob, isdf)
-    V_workspace = create_V_workspace(N_v, N_c, N_k, N_μ)
+    V_workspace = create_V_workspace(prob, isdf)
 
     u_v_vc_conj = conj.(interpolation_coefficients(isdf)[3])
     u_c_vc = interpolation_coefficients(isdf)[4]
@@ -74,7 +74,10 @@ Allocates momory for efficiently computing the application of ``V`` to
 a vector. The output is a 5-tuple of arrays of different dimension and
 sizes.
 """
-function create_V_workspace(N_v, N_c, N_k, N_μ)
+function create_V_workspace(prob, isdf)
+    N_v, N_c, N_k = size(prob)
+    N_μ = size(isdf)[3]
+
     X = complex(zeros(N_v, N_c, N_k))
     B = complex(zeros(N_μ, N_c, N_k))
     C = complex(zeros(N_μ))
@@ -93,25 +96,12 @@ The result is a hermitian `LinearMap` of size
 `(N_v * N_c * N_K, N_v * N_c * N_k)`.
 """
 function setup_W(prob::BSEProblemExciting, isdf)
-    w_hat = prob.w_hat
-    q_2bz_ind = prob.q_2bz_ind
-    q_2bz_shift = prob.q_2bz_shift
-
-    N_rs = size_r(prob)
     N_v, N_c, N_k = size(prob)
-    N_ks = size_k(prob)
-    Ω0_vol = Ω0_volume(prob)
-    N_k_diffs = prob.N_k_diffs
-
-    N_ν = size(isdf)[1]
-    N_μ = size(isdf)[2]
-    ζ_vv = interpolation_vectors(isdf)[1]
-    ζ_cc = interpolation_vectors(isdf)[2]
     u_v_vv_conj = conj.(interpolation_coefficients(isdf)[1]) #TODO: test whether the conjugation is really necessary for performance
     u_c_cc = interpolation_coefficients(isdf)[2]
 
-    W_tilde = assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
-    W_workspace = create_W_workspace(N_v, N_c, N_ks, N_k_diffs, N_ν, N_μ)
+    W_tilde = assemble_W_tilde(prob, isdf)
+    W_workspace = create_W_workspace(prob, isdf)
 
     W = LinearMap{Complex{Float64}}(
         x -> W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace),
@@ -121,10 +111,24 @@ function setup_W(prob::BSEProblemExciting, isdf)
 end
 
 """
-    assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+    assemble_W_tilde(prob, isdf)
 
 Assembles a Matrix representation of ``W`` in the basis given by interpolation vectors of the ISDF.
-"""
+""" #TODO: better dispatch on problem type
+function assemble_W_tilde(prob::AbstractBSEProblem, isdf::ISDF)
+    w_hat = prob.w_hat
+    q_2bz_ind = prob.q_2bz_ind
+    q_2bz_shift = prob.q_2bz_shift
+
+    N_rs = size_r(prob)
+    N_k = size(prob)[3]
+    Ω0_vol = Ω0_volume(prob)
+
+    ζ_vv = interpolation_vectors(isdf)[1]
+    ζ_cc = interpolation_vectors(isdf)[2]
+
+    return assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+end
 function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
     N_r = size(ζ_vv, 1)
     N_ν = size(ζ_vv, 2)
@@ -153,14 +157,22 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_
 end
 
 """
-    create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
+    create_W_workspace(prob, isdf)
 
 Allocates momory for efficiently computing the application of ``W`` to
 a vector. The output is a 17-tuple of FFTW plans, arrays of different
 dimension and sizes, and tuples.
-"""
-function create_W_workspace(N_v, N_c, N_ks, N_qs, N_ν, N_μ)
+""" #TODO: better dispatch on problem type
+function create_W_workspace(prob::AbstractBSEProblem, isdf::ISDF)
+    N_v, N_c, N_k = size(prob)
+    N_ks = size_k(prob)
     N_k = prod(N_ks)
+    Ω0_vol = Ω0_volume(prob)
+    N_qs = prob.N_k_diffs
+
+    N_ν = size(isdf)[1]
+    N_μ = size(isdf)[2]
+
     p = plan_fft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
     p_back = plan_bfft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
     X = complex(zeros(N_v, N_c, N_k))
