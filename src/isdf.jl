@@ -66,8 +66,6 @@ function ISDF(prob::AbstractBSEProblem, r_μ_vv_indices::AbstractVector, r_μ_cc
 end
 
 function ISDF(prob::AbstractBSEProblem, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
-    u_v, u_c = orbitals(prob)
-
     r_μ_vv_indices = find_r_μ(prob, N_μ_vv)
     r_μ_cc_indices = find_r_μ(prob, N_μ_cc)
     r_μ_vc_indices = find_r_μ(prob, N_μ_vc)
