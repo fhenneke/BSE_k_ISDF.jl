@@ -175,19 +175,19 @@ function create_W_workspace(prob::AbstractBSEProblem, isdf::ISDF)
 
     p = plan_fft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
     p_back = plan_bfft(zeros(Complex{Float64}, N_qs); flags = FFTW.PATIENT, timelimit=60)
-    X = complex(zeros(N_v, N_c, N_k))
-    B = complex(zeros(N_ν, N_c, N_k))
-    C = complex(zeros(N_k, N_μ, N_ν))
-    D = complex(zeros(N_k, N_μ, N_ν))
-    E = complex(zeros(N_ν, N_c, N_k))
-    F = complex(zeros(N_v, N_c, N_k))
-    c_reshaped = complex(zeros(N_ks))
-    c_padded = complex(zeros(N_qs))
-    c_transformed = complex(zeros(N_qs))
-    d_reshaped = complex(zeros(N_ks))
-    d_padded = complex(zeros(N_qs))
-    w_tilde_reshaped = complex(zeros(N_qs))
-    w_tilde_hat = complex(zeros(N_qs))
+    X = zeros(Complex{Float64}, N_v, N_c, N_k)
+    B = zeros(Complex{Float64}, N_ν, N_c, N_k)
+    C = zeros(Complex{Float64}, N_k, N_μ, N_ν)
+    D = zeros(Complex{Float64}, N_k, N_μ, N_ν)
+    E = zeros(Complex{Float64}, N_ν, N_c, N_k)
+    F = zeros(Complex{Float64}, N_v, N_c, N_k)
+    c_reshaped = zeros(Complex{Float64}, N_ks..., Threads.nthreads())
+    c_padded = zeros(Complex{Float64}, N_qs..., Threads.nthreads())
+    c_transformed = zeros(Complex{Float64}, N_qs..., Threads.nthreads())
+    d_reshaped = zeros(Complex{Float64}, N_ks..., Threads.nthreads())
+    d_padded = zeros(Complex{Float64}, N_qs..., Threads.nthreads())
+    w_tilde_reshaped = zeros(Complex{Float64}, N_qs..., Threads.nthreads())
+    w_tilde_hat = zeros(Complex{Float64}, N_qs..., Threads.nthreads())
     W_workspace = (p, p_back, X, B, C, D, E, F, c_reshaped, c_padded, d_reshaped, d_padded, c_transformed, w_tilde_reshaped, w_tilde_hat, N_ks, N_qs)
 
     return W_workspace
@@ -275,15 +275,22 @@ function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     N_k = size(u_v_vv_conj, 3)
     N_ν = size(u_v_vv_conj, 1)
     N_μ = size(u_c_cc, 1)
-    p, p_back, X, B, C, D, E, F, c_reshaped, c_padded, d_reshaped, d_padded, c_transformed, w_tilde_reshaped, w_tilde_hat, N_ks, N_qs = W_workspace
+    p, p_back, X, B, C, D, E, F, c_reshaped_threads, c_padded_threads, d_reshaped_threads, d_padded_threads, c_transformed_threads, w_tilde_reshaped_threads, w_tilde_hat_threads, N_ks, N_qs = W_workspace
 
     X[:] .= x
     @views for jk in 1:N_k
         mul!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
         mul!(C[jk, :, :], u_c_cc[:, :, jk], transpose(B[:, :, jk]))
     end
-    for iμ in 1:N_μ
-        for iν in 1:N_ν
+    Threads.@threads for iν in 1:N_ν
+        c_reshaped = c_reshaped_threads[:, :, :, Threads.threadid()]
+        c_padded =  c_padded_threads[:, :, :, Threads.threadid()]
+        d_reshaped = d_reshaped_threads[:, :, :, Threads.threadid()]
+        d_padded = d_padded_threads[:, :, :, Threads.threadid()]
+        c_transformed = c_transformed_threads[:, :, :, Threads.threadid()]
+        w_tilde_reshaped = w_tilde_reshaped_threads[:, :, :, Threads.threadid()]
+        w_tilde_hat = w_tilde_hat_threads[:, :, :, Threads.threadid()]
+        for iμ in 1:N_μ
             c_reshaped[:] .= @view(C[:, iμ, iν])
             w_tilde_reshaped[:] .= @view(W_tilde[:, iμ, iν])
             w_conv!(d_reshaped, w_tilde_reshaped, c_reshaped, c_padded, d_padded, c_transformed, w_tilde_hat, p, p_back)
