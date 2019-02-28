@@ -62,9 +62,7 @@ function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
     return BSEProblemExciting(input_xml, N_rs, r_lattice, r_cartesian, a_mat, Ω0_vol, atoms, N_ks, k_bz, b_mat, BZ_vol, E_v, E_c, u_v, u_c, N_k_diffs, q_bz, q_2bz, q_2bz_ind, q_2bz_shift, w_hat, gqmax, pmat)
 end
 
-function read_r_points_k_points(N_rs, path) # TODO: make into type constructor
-    N_unit = prod(N_rs)
-
+function read_r_points_k_points(N_rs, path) # TODO: make into type constructor?
     lattice_out = readdlm(path * "/LATTICE.OUT")
     a_mat = zeros(3, 3)
     a_mat .= lattice_out[8:10, 1:3]
@@ -94,7 +92,7 @@ function read_r_points_k_points(N_rs, path) # TODO: make into type constructor
 end
 
 function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path)
-    N_unit = prod(N_rs)
+    N_r = prod(N_rs)
 
     eigval_out = readdlm(path * "/EIGVAL_QMT001.OUT")
 
@@ -114,7 +112,7 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
     mask_boundary = vec(mask_boundary)
 
 
-    u_v = zeros(Complex{Float64}, N_unit, N_v, N_k)
+    u_v = zeros(Complex{Float64}, N_r, N_v, N_k)
 
     file = h5open(path * "/bse_output.h5", "r")
     for ik in 1:N_k
@@ -129,7 +127,7 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
         end
     end
 
-    u_c = zeros(Complex{Float64}, N_unit, N_c, N_k)
+    u_c = zeros(Complex{Float64}, N_r, N_c, N_k)
     for ik in 1:N_k
         phase = kron(
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
@@ -300,12 +298,12 @@ function find_r_μ(prob::BSEProblemExciting, N_μ::Int)
 end
 
 """
-    find_r_μ_uniform(N_unit, N_μ)
+    find_r_μ_uniform(N_r, N_μ)
 
-Helper function to select `N_μ` points uniformly from the range `1:N_unit`.
+Helper function to select `N_μ` points uniformly from the range `1:N_r`.
 """
-function find_r_μ_uniform(N_unit::Int, N_μ::Int)
-    r_μ_indices = round.(Int, range(1, stop = N_unit + 1, length = N_μ + 1)[1:(end - 1)])
+function find_r_μ_uniform(N_r::Int, N_μ::Int)
+    r_μ_indices = round.(Int, range(1, stop = N_r + 1, length = N_μ + 1)[1:(end - 1)])
     return r_μ_indices
 end
 
