@@ -4,6 +4,7 @@ import DelimitedFiles: readdlm
 import HDF5: h5open, readmmap
 import LightXML: parse_file, root, attribute
 import Random: MersenneTwister, shuffle
+import Mmap
 
 mutable struct BSEProblemExciting <: AbstractBSEProblem
     input_xml
@@ -111,10 +112,9 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
     mask_boundary[:, :, N_rs[3] + 1] .= false
     mask_boundary = vec(mask_boundary)
 
-
-    u_v = zeros(Complex{Float64}, N_r, N_v, N_k)
-
     file = h5open(path * "/bse_output.h5", "r")
+
+    s = open(path * "/u_v.bin", "w+")
     for ik in 1:N_k
         phase = kron(
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
@@ -123,11 +123,14 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
         for iv in 1:N_v
             c = read(file, "wfplot/" * lpad(string(N_core + iv), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
 
-            u_v[:, iv, ik] .= (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase
+            write(s, (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase)
         end
     end
+    close(s)
+    s_v = open(path * "/u_v.bin")
+    u_v = Mmap.mmap(s_v, Array{Complex{Float64}, 3}, (N_r, N_v, N_k))
 
-    u_c = zeros(Complex{Float64}, N_r, N_c, N_k)
+    s = open(path * "/u_c.bin", "w+")
     for ik in 1:N_k
         phase = kron(
             exp.(-2 * pi * im * range(0.0, stop = 1.0, length = N_rs[3] + 1)[1:N_rs[3]] .* k_bz[3, ik]),
@@ -136,9 +139,13 @@ function read_eigenvalues_eigenfunctions(N_core, N_v, N_c, N_k, N_rs, k_bz, path
         for ic in 1:N_c
             c = read(file, "wfplot/" * lpad(string(N_core + N_v + ic), 4, string(0)) * "/" * lpad(string(ik), 4, string(0)) * "/data")
 
-            u_c[:, ic, ik] .= (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase
+            write(s, (c[1, mask_boundary] .+ im * c[2, mask_boundary]) .* phase)
         end
     end
+    close(s)
+    s_c = open(path * "/u_c.bin")
+    u_c = Mmap.mmap(s_c, Array{Complex{Float64}, 3}, (N_r, N_c, N_k))
+
     close(file)
 
     return E_v, E_c, u_v, u_c
