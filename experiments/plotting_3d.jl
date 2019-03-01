@@ -42,18 +42,6 @@ example_path = "diamond/"
 
 #variable parameters
 N_ks_vec, setup_times, evaluation_times =  load(example_path * "/benchmark.jld2", "N_ks_vec", "setup_times", "evaluation_times")
-# N_1d = 20
-# N_μ_irs = (3, 3, 3)
-# N_μ_mt = 2 * 3^3
-#
-# #variable parameters
-# N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9)]#, (13, 13, 13)]
-#
-# results = [load("diamond/$(N_ks...)_$(N_1d)/benchmark_$(N_μ_irs...)_$(N_μ_mt).jld2") for N_ks in N_ks_vec]
-# timings = ["t_isdf", "t_H_setup", "t_H_x"]
-#
-# setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
-# evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
 
 plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
 plot!(prod.(N_ks_vec), setup_times, m = :circ, labels = "initial setup", xscale = :log10, yscale = :log10)
@@ -87,64 +75,7 @@ savefig("results_" * example_string * "/errors_H.pdf")
 
 # %% plot optical absorption spectrum for different N_k
 
-N_unit = 128
-N_k_vec = 2 .^(4:10)
-N_iter = 200
-N_unit_ref = 128
-N_k_ref = 4096
-N_iter_ref = 200
-
-optical_absorption_lanc = []
-optical_absorption_lanc = [load("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "optical_absorption_lanc") for N_k in N_k_vec]
-
-Erange, optical_absorption_ref = load("results_" * example_string * "/optical_absorption_lanc_ref_$(N_unit_ref)_$(N_k_ref)_$(N_iter_ref).jld2", "Erange", "optical_absorption_lanc")
-
-errors_optical_absorption = []
-for i in 1:length(N_k_vec)
-    push!(errors_optical_absorption, norm(optical_absorption_lanc[i] - optical_absorption_ref, 1) / norm(optical_absorption_ref, 1))
-end
-
-p_errors_optical_absorption_k = plot(title = "error in optical absorption spectrum", xlabel = L"N_k", xlims = (N_k_vec[1], N_k_vec[end]), ylims = (5e-3, 1), xscale = :log2, yscale = :log10)
-plot!(p_errors_optical_absorption_k, N_k_vec, errors_optical_absorption, m = :circ, label = "")
-
-savefig("results_" * example_string * "/errors_optical_absorption_k.pdf")
-
-plot_indices = [1, 3, 5]
-p_optical_absorption = plot(title = "optical absorption spectrum", xlabel = "E")
-plot!(p_optical_absorption, Erange, optical_absorption_ref, lw = 3, label = "reference spectrum", xlims = (3, 10))
-plot!(p_optical_absorption, Erange, optical_absorption_lanc[plot_indices], lw = 2, label = "approximate spectrum for " .* L"N_k = " .* string.(transpose(N_k_vec[plot_indices])))
-
-savefig("results_" * example_string * "/optical_absorption_spectrum_k.pdf")
-
-# %% error in the first eigenvalue and spectral function for different N_μ
-
-N_unit = 128
-N_k = 256
-N_iter = 200
-
-N_unit_ref = 128
-N_v_ref = 4
-N_c_ref = 5
-N_k_ref = 256
-N_iter_ref = 200
-
-M_tol_vec = [0.8, 0.5, 0.25, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
-evs = [load("results_" * example_string * "/eigs_$(N_unit)_$(N_k)_$(M_tol).jld2", "ev")[1] for M_tol in M_tol_vec]
-optical_absorption_lanc = [load("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter)_$(M_tol).jld2", "optical_absorption_lanc") for M_tol in M_tol_vec]
-
-ev_ref = load("results_" * example_string * "/H_exact_$(N_unit_ref)_$(N_v_ref)_$(N_c_ref)_$(N_k_ref).jld2", "ev")[1]
-Erange, optical_absorption_ref = load("results_" * example_string * "/optical_absorption_lanc_ref_$(N_unit_ref)_$(N_k_ref)_$(N_iter_ref).jld2", "Erange", "optical_absorption_lanc")
-
-errors_optical_absorption = []
-for i in 1:length(M_tol_vec)
-    push!(errors_optical_absorption, norm(optical_absorption_lanc[i] - optical_absorption_ref, 1) / norm(optical_absorption_ref, 1))
-end
-
-p_errors_spectrum = plot(title = "Error in spectrum of H", xlabel = L"M_{tol}", xscale = :log10, yscale = :log10)
-plot!(p_errors_spectrum, M_tol_vec, abs.(evs .- ev_ref), m = :circ, label = "error in first eigenvalue")
-plot!(p_errors_spectrum, M_tol_vec, errors_optical_absorption, m = :square, label = "error in spectral function")
-
-savefig("results_" * example_string * "/errors_spectrum.pdf")
+# TODO: do this?
 
 # %% plot  absorption spctrum
 
