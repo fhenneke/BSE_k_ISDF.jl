@@ -38,28 +38,30 @@ scene = AbstractPlotting.vbox(p1, p2)
 
 # %% plot benchmark results for diamond
 
-N_1d = 20
-N_μ_irs = (3, 3, 3)
-N_μ_mt = 2 * 3^3
+example_path = "diamond/"
 
 #variable parameters
-N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9), (13, 13, 13)]
-
-results = [load("diamond/$(N_ks...)_$(N_1d)/benchmark_$(N_μ_irs...)_$(N_μ_mt).jld2") for N_ks in N_ks_vec]
-timings = ["t_isdf", "t_H_setup", "t_H_x"]
-
-setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
-evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
+N_ks_vec, setup_times, evaluation_times =  load(example_path * "/benchmark.jld2", "N_ks_vec", "setup_times", "evaluation_times")
+# N_1d = 20
+# N_μ_irs = (3, 3, 3)
+# N_μ_mt = 2 * 3^3
+#
+# #variable parameters
+# N_ks_vec = [(2, 2, 2), (3, 3, 3), (4, 4, 4), (5, 5, 5), (7, 7, 7), (9, 9, 9)]#, (13, 13, 13)]
+#
+# results = [load("diamond/$(N_ks...)_$(N_1d)/benchmark_$(N_μ_irs...)_$(N_μ_mt).jld2") for N_ks in N_ks_vec]
+# timings = ["t_isdf", "t_H_setup", "t_H_x"]
+#
+# setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
+# evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
 
 plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
 plot!(prod.(N_ks_vec), setup_times, m = :circ, labels = "initial setup", xscale = :log10, yscale = :log10)
 plot!(prod.(N_ks_vec), evaluation_times, m = :square, labels = "matrix vector product")
 # plot!(N_k_vec, (0.5 * 80 * 1e-6 * 20^2) * N_k_vec.^2, ls = :dash, labels = "entrywise assembly of Hamiltonian")
-plot!(prod.(N_ks_vec), 3e-3 * prod.(N_ks_vec), ls = :dash, labels = L"O(N_k)")
+plot!(prod.(N_ks_vec), 6e-3 * prod.(N_ks_vec), ls = :dash, labels = L"O(N_k)")
 
-savefig("diamond/timings_k.pdf")
-
-# %% plot error
+savefig(example_path * "/timings_k.pdf")
 
 # %% plotting of error in M
 example_path = "diamond/131313_20/"
