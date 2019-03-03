@@ -266,8 +266,7 @@ function find_r_μ(prob::BSEProblemExciting, N_μ_irs::Tuple, N_μ_mt::Int)
     r_μ_mask_3[grid_3] .= 1.0
     r_μ_mask = Bool.(kron(r_μ_mask_3, r_μ_mask_2, r_μ_mask_1))
 
-    # aditional points in muffin tin regions
-    N_r = prod(prob.N_rs)
+    # additional points in muffin tin regions
     r_mask_mt = zeros(Bool, N_r)
     for atom in prob.atoms
         for ir in 1:N_r
