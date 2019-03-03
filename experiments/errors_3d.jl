@@ -18,14 +18,14 @@ using BSE_k_ISDF
 
 # %% set up problem
 
-example_path = "/home/felix/Work/Research/Code/BSE_k_ISDF/experiments/diamond/131313_20/"
+example_path = "diamond/131313_20/" # "graphene/"
 
 N_1d = 20 # TODO: read from file
-N_rs = (N_1d, N_1d, N_1d)
+N_rs = (N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
 N_core = 0
 N_v = 4
-N_c = 5 # maybe also use 5 here
-N_ks = (13, 13, 13) # TODO: read from file
+N_c = 5
+N_ks = (13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
 @time prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path);
 
 # %% error for different N_μ
@@ -42,7 +42,7 @@ f = N_μ -> begin
     ((N_1d, N_1d, N_1d), N_μ - N_1d^3)
 end
 
-N_μs_vec = [f(N_μ) for N_μ in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500, 600]]
+N_μs_vec = [f(N_μ) for N_μ in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500, 600]] # only up to 350 for graphene
 
 u_v, u_c = prob.u_v, prob.u_c
 
@@ -50,21 +50,21 @@ errors_M_vv = []
 errors_M_cc = []
 errors_M_vc = []
 
-@time for N_μ_vvs in N_μs_vec
+for N_μ_vvs in N_μs_vec
     r_μ_vv_indices = BSE_k_ISDF.find_r_μ(prob, N_μ_vvs[1], N_μ_vvs[2])
     ζ_vv = BSE_k_ISDF.assemble_ζ(u_v, r_μ_vv_indices)
     error_M_vv = BSE_k_ISDF.isdf_error_estimate(u_v, ζ_vv, r_μ_vv_indices, N_k_samples)
 
     push!(errors_M_vv, error_M_vv)
 end
-@time for N_μ_ccs in N_μs_vec
+for N_μ_ccs in N_μs_vec
     r_μ_cc_indices = BSE_k_ISDF.find_r_μ(prob, N_μ_ccs[1], N_μ_ccs[2])
     ζ_cc = BSE_k_ISDF.assemble_ζ(u_c, r_μ_cc_indices)
     error_M_cc = BSE_k_ISDF.isdf_error_estimate(u_c, ζ_cc, r_μ_cc_indices, N_k_samples)
 
     push!(errors_M_cc, error_M_cc)
 end
-@time for N_μ_vcs in N_μs_vec
+for N_μ_vcs in N_μs_vec
     r_μ_vc_indices = BSE_k_ISDF.find_r_μ(prob, N_μ_vcs[1], N_μ_vcs[2])
     ζ_vc = BSE_k_ISDF.assemble_ζ(u_v, u_c, r_μ_vc_indices)
     error_M_vc = BSE_k_ISDF.isdf_error_estimate(u_v, u_c, ζ_vc, r_μ_vc_indices, N_k_samples)
@@ -124,17 +124,17 @@ absorption_reference[:, 3] = readdlm(example_path * "/EPSILON/EPSILON_BSE-single
 save(example_path * "/optical_absorption_reference.jld2", "Erange", Erange, "absorption", absorption_reference)
 
 # compute spectra from α and β
-σ = 0.0055
+σ = 0.0055 # 0.0036 for graphene
 g = ω -> 1 / π * σ / (ω^2 + σ^2)
 
 for M_tol in M_tol_vec
     absorption = zeros(length(Erange))
-    for direction in 1:3
+    for direction in 1:3 # 1:2 for graphene
         α, β, norm_d = load(example_path * "/optical_absorption_lanczos_$(M_tol)_$(direction).jld2", "alpha", "beta", "norm_d")
 
         absorption .+= BSE_k_ISDF.lanczos_optical_absorption(α, β, N_iter, g, Erange, norm_d^2 * 8 * pi^2 / (size(prob)[3] * BSE_k_ISDF.Ω0_volume(prob)))
     end
-    absorption .*= 1 / 3
+    absorption .*= 1 / 3# 1 / 2 for graphene
 
     save(example_path * "/optical_absorption_$(M_tol).jld2", "Erange", Erange, "absorption", absorption)
 end
