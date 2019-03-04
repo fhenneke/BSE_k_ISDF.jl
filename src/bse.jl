@@ -316,7 +316,7 @@ function setup_H(prob, isdf)
     D = setup_D(prob)
     V = setup_V(prob, isdf)
     W = setup_W(prob, isdf)
-    return D + 2 * V - W
+    return D + 2 * V - W # TODO: add scissor shift here?
 end
 
 ###############################################################################

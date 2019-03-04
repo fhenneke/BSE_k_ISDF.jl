@@ -35,6 +35,7 @@ mutable struct BSEProblemExciting <: AbstractBSEProblem
     gqmax
 
     pmat
+    #TODO: add scissor shift here?
 end
 
 function BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, path)
