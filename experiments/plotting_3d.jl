@@ -68,55 +68,59 @@ plot!(N_μ_vec, errors_M_vc, m = :diamond, label = L"M_{vc}")
 
 savefig(example_path * "/errors_M.pdf")
 
-# %% plotting of error in H
-M_tol_vec, errors_H = load("results_" * example_string * "/errors_H_128_128.jld2", "M_tol_vec", "errors_H")
+# %% plotting of error in spectrum of H
+example_path = "diamond/131313_20/"
+
+M_tol_vec, errors_optical_absorption, errors_ground_state_energy = load(example_path * "/errors_spectrum.jld2", "M_tol_vec",  "errors_optical_absorption", "errors_ground_state_energy")
 
 plot(title = "Error in " * L"H", xlabel = L"\epsilon_M", xscale = :log10, yscale = :log10, ylims = (1e-11, 1e0))
 plot!(M_tol_vec, errors_H, m = :circ, label = L"H")
 
 savefig("results_" * example_string * "/errors_H.pdf")
 
-# %% plot optical absorption spectrum for different N_k
+# %% plot optical absorption spectrum
 
-# TODO: do this?
+example_path = "diamond/131313_20/" # "graphene/" for graphene
 
-# %% plot  absorption spctrum
+Ha_to_eV = 27.211396641308
 
-example_path = "graphene/" # "diamond/131313_20/"
-N_ks = (42, 42, 1) # (13, 13, 13)
-Ω0_vol = 76.76103479594097
+Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
 
-# load reference
-Erange_exciting = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 1]
-absorption_exciting = zeros(length(Erange_exciting), 3)
-absorption_exciting[:, 1] = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 3]
-absorption_exciting[:, 2] = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC22.OUT")[19:end, 3]
-absorption_exciting[:, 3] = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC33.OUT")[19:end, 3]
-
+M_tol = 0.2
 N_iter = 200
-direction = 1
-σ = 0.0055
-g = ω -> 1 / π * σ / (ω^2 + σ^2)
-Ha_to_eV = 27.205144510369827
-Erange = Erange_exciting ./ Ha_to_eV
+absorption_isdf = load(example_path * "/optical_absorption_$(M_tol)_$(N_iter).jld2", "absorption")
 
-M_tol_vec = [0.5, 0.25]
-optical_absorption_lanc = []
-for M_tol in M_tol_vec
-    α, β, norm_d2 = load(example_path * "/optical_absorption_lanczos_$(M_tol).jld2", "alpha", "beta", "norm d^2")
-
-    push!(optical_absorption_lanc, norm_d2 * 8 * pi^2 / (prod(N_ks) * Ω0_vol) * BSE_k_ISDF.lanczos_optical_absorption(α, β, N_iter, g, Erange))
-end
-
-p_optical_absorption_M_tol = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (4, 16))
-plot!(p_optical_absorption_M_tol, Erange_exciting, absorption_exciting[:, direction], lw = 4, label = "reference spectrum")
-plot!(p_optical_absorption_M_tol, Erange_exciting, [optical_absorption_lanc[1] optical_absorption_lanc[2]], lw = 2, label = "approximate spectrum for " .* L"M_{tol} = " .* string.(transpose(M_tol_vec)))
+p_optical_absorption = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35)) #xlims = (1, 5), ylims = (0, 15) for graphene
+plot!(p_optical_absorption, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
+plot!(p_optical_absorption, Ha_to_eV .* Erange, absorption_isdf, lw = 2, label = "spectrum using ISDF")
 
 savefig(example_path * "/optical_absorption_spectrum.pdf")
 
-# %% plot absorption spctrum for different N_μ
+# %% plot optical absorption spectrum for different N_iter
 
-example_path = "graphene/"
+example_path = "diamond/131313_20/"
+
+Ha_to_eV = 27.211396641308
+
+Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
+
+M_tol = 0.25
+N_iter_vec = [200]
+optical_absorption_lanc = []
+for N_iter in N_iter_vec
+    absorption = load(example_path * "/optical_absorption_$(M_tol)_$(N_iter).jld2", "absorption")
+
+    push!(optical_absorption_lanc, absorption)
+end
+
+p_optical_absorption_N_k = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35))
+plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
+plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, optical_absorption_lanc, lw = 2, label = "approximate spectrum for " .* L"N_{iter} = " .* string.(transpose(N_iter_vec)))
+
+savefig(example_path * "/optical_absorption_spectrum_lanczos.pdf")
+# %% plot optical absorption spctrum for different N_μ
+
+example_path = "diamond/131313_20/"
 
 Ha_to_eV = 27.211396641308
 
@@ -130,8 +134,8 @@ for M_tol in M_tol_vec
     push!(optical_absorption_lanc, absorption)
 end
 
-p_optical_absorption_M_tol = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (1, 5), ylims = (0, 20))
+p_optical_absorption_M_tol = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35))# xlims = (1, 5), ylims = (0, 15)) for graphene
 plot!(p_optical_absorption_M_tol, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
 plot!(p_optical_absorption_M_tol, Ha_to_eV .* Erange, optical_absorption_lanc, lw = 2, label = "approximate spectrum for " .* L"M_{tol} = " .* string.(transpose(M_tol_vec)))
 
-# savefig(example_path * "/optical_absorption_spectrum.pdf")
+savefig(example_path * "/optical_absorption_spectrum_isdf.pdf")

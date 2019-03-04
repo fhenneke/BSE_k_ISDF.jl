@@ -98,7 +98,7 @@ for M_tol in M_tol_vec
     for direction in 1:3
         d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
 
-        α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), N_iter)
+        α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), N_iter) # H + 0.01 * I for graphene
 
         # save results
         save(example_path * "/optical_absorption_lanczos_$(M_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
@@ -109,7 +109,7 @@ for M_tol in M_tol_vec
     save(example_path * "/eigs_$(M_tol).jld2", "eigenvalues", eigenvalues, "eigenvectors", eigenvectors)
 end
 
-# %% save spectra
+# %% save spectra for different M_tol and N_iter
 
 # load reference spectrum
 Erange_reference = readdlm(example_path * "/EPSILON/EPSILON_BSE-singlet-TDA-BAR_SCR-full_OC11.OUT")[19:end, 1]
@@ -127,16 +127,18 @@ save(example_path * "/optical_absorption_reference.jld2", "Erange", Erange, "abs
 σ = 0.0055 # 0.0036 for graphene
 g = ω -> 1 / π * σ / (ω^2 + σ^2)
 
-for M_tol in M_tol_vec
-    absorption = zeros(length(Erange))
-    for direction in 1:3 # 1:2 for graphene
-        α, β, norm_d = load(example_path * "/optical_absorption_lanczos_$(M_tol)_$(direction).jld2", "alpha", "beta", "norm_d")
+for N_iter in [50, 100, 200]
+    for M_tol in M_tol_vec
+        absorption = zeros(length(Erange))
+        for direction in 1:3 # 1:2 for graphene
+            α, β, norm_d = load(example_path * "/optical_absorption_lanczos_$(M_tol)_$(direction).jld2", "alpha", "beta", "norm_d")
 
-        absorption .+= BSE_k_ISDF.lanczos_optical_absorption(α, β, N_iter, g, Erange, norm_d^2 * 8 * pi^2 / (size(prob)[3] * BSE_k_ISDF.Ω0_volume(prob)))
+            absorption .+= BSE_k_ISDF.lanczos_optical_absorption(α, β, N_iter, g, Erange, norm_d^2 * 8 * pi^2 / (size(prob)[3] * BSE_k_ISDF.Ω0_volume(prob)))
+        end
+        absorption .*= 1 / 3# 1 / 2 for graphene
+
+        save(example_path * "/optical_absorption_$(M_tol)_$(N_iter).jld2", "Erange", Erange, "absorption", absorption)
     end
-    absorption .*= 1 / 3# 1 / 2 for graphene
-
-    save(example_path * "/optical_absorption_$(M_tol).jld2", "Erange", Erange, "absorption", absorption)
 end
 
 # %% compute errors
@@ -146,13 +148,15 @@ eigenvalue_reference = read(f["eigvec-singlet-TDA-BAR-full"]["0001"]["evals"])[1
 close(f)
 Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
 
+N_iter = 200
+
 errors_optical_absorption = []
 errors_ground_state_energy = []
 for M_tol in M_tol_vec
     # save results
-    absorption = load(example_path * "/optical_absorption_$(M_tol).jld2", "absorption")
+    absorption = load(example_path * "/optical_absorption_$(M_tol)_$(N_iter).jld2", "absorption")
 
-    error_optical_absorption = norm(absorption - absorption_reference[:, 1], 1) * (Erange[2] - Erange[1])
+    error_optical_absorption = norm(absorption - absorption_reference[:, 1], 1) / norm(absorption_reference[:, 1], 1)
     push!(errors_optical_absorption, error_optical_absorption)
 
     eigenvalues = load(example_path * "/eigs_$(M_tol).jld2", "eigenvalues")
