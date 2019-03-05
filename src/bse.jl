@@ -100,11 +100,11 @@ function setup_W(prob::BSEProblemExciting, isdf)
     u_v_vv_conj = conj.(interpolation_coefficients(isdf)[1]) #TODO: test whether the conjugation is really necessary for performance
     u_c_cc = interpolation_coefficients(isdf)[2]
 
-    W_tilde = assemble_W_tilde(prob, isdf)
+    W_tilde_hat = assemble_W_tilde(prob, isdf)
     W_workspace = create_W_workspace(prob, isdf)
 
     W = LinearMap{Complex{Float64}}(
-        x -> W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace),
+        x -> W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace),
         N_v * N_c * N_k; ishermitian=true)
 
     return W
@@ -122,18 +122,19 @@ function assemble_W_tilde(prob::AbstractBSEProblem, isdf::ISDF)
 
     N_rs = size_r(prob)
     N_k = size(prob)[3]
+    N_qs = prob.N_k_diffs
     Ω0_vol = Ω0_volume(prob)
 
     ζ_vv = interpolation_vectors(isdf)[1]
     ζ_cc = interpolation_vectors(isdf)[2]
 
-    return assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+    return assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, N_qs, q_2bz_ind, q_2bz_shift)
 end
-function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_2bz_shift)
+function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, N_qs, q_2bz_ind, q_2bz_shift)
     N_r = size(ζ_vv, 1)
     N_ν = size(ζ_vv, 2)
     N_μ = size(ζ_cc, 2)
-    N_q = length(q_2bz_ind)
+    N_q = prod(N_qs)
 
     ζ_vv_hat = zeros(Complex{Float64}, size(ζ_vv))
     for iμ in 1:size(ζ_vv, 2)
@@ -144,16 +145,17 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, q_2bz_ind, q_
         ζ_cc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_cc[:, iμ], N_rs)))
     end
 
-    W_tilde = complex(zeros(N_q, N_μ, N_ν))
+    W_tilde = complex(zeros(N_qs[1], N_qs[2], N_qs[3], N_μ, N_ν))
+    W_tilde_reshaped = reshape(W_tilde, N_q, N_μ, N_ν)
 
     # TODO: can this be written in terms of more general data structures as W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) * ζ_cc_hat' * w_hat[iq] * ζ_vv_hat?
     for iq in 1:N_q
         G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
-        W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) *
+        W_tilde_reshaped[iq, :, :] = 1 / (Ω0_vol^2 * N_k) *
             ζ_cc_hat[G_shift_indices, :]' * w_hat[q_2bz_ind[iq]][1] * ζ_vv_hat[G_shift_indices, :]
     end
 
-    return W_tilde
+    return fft!(W_tilde, (1, 2, 3))
 end
 
 """
@@ -215,7 +217,7 @@ function w_conv!(b, w, a, ap, bp, cp, w_hat, p, p_back)
     copyto!(ap, indices, a, indices)
 
     mul!(cp, p, ap)
-    mul!(w_hat, p, w)
+    # mul!(w_hat, p, w)
     cp .*= (1 / length(w)) .* w_hat
 
     mul!(bp, p_back, cp)
@@ -265,11 +267,11 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
 end
 
 """
-    W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
+    W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
 
 Compute the product of ``W`` and `x`.
 """
-function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
+function W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
     N_v = size(u_v_vv_conj, 2)
     N_c = size(u_c_cc, 2)
     N_k = size(u_v_vv_conj, 3)
@@ -285,7 +287,7 @@ function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     Threads.@threads for iν in 1:N_ν
         @views for iμ in 1:N_μ
             c_reshaped_threads[:, :, :, Threads.threadid()] .= reshape(C[:, iμ, iν], N_ks)
-            w_tilde_reshaped_threads[:, :, :, Threads.threadid()] .= reshape(W_tilde[:, iμ, iν], N_qs)
+            w_tilde_hat_threads[:, :, :, Threads.threadid()] .= W_tilde_hat[:, :, :, iμ, iν]
             w_conv!(d_reshaped_threads[:, :, :, Threads.threadid()], w_tilde_reshaped_threads[:, :, :, Threads.threadid()], c_reshaped_threads[:, :, :, Threads.threadid()], c_padded_threads[:, :, :, Threads.threadid()], d_padded_threads[:, :, :, Threads.threadid()], c_transformed_threads[:, :, :, Threads.threadid()], w_tilde_hat_threads[:, :, :, Threads.threadid()], p, p_back)
             D[:, iμ, iν] .= vec(d_reshaped_threads[:, :, :, Threads.threadid()])
         end
