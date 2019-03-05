@@ -285,7 +285,7 @@ function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     Threads.@threads for iν in 1:N_ν
         @views for iμ in 1:N_μ
             c_reshaped_threads[:, :, :, Threads.threadid()] .= reshape(C[:, iμ, iν], N_ks)
-            w_tilde_reshaped_threads[:, :, :, Threads.threadid()] .= W_tilde[:, :, :, iμ, iν]
+            w_tilde_reshaped_threads[:, :, :, Threads.threadid()] .= reshape(W_tilde[:, iμ, iν], N_qs)
             w_conv!(d_reshaped_threads[:, :, :, Threads.threadid()], w_tilde_reshaped_threads[:, :, :, Threads.threadid()], c_reshaped_threads[:, :, :, Threads.threadid()], c_padded_threads[:, :, :, Threads.threadid()], d_padded_threads[:, :, :, Threads.threadid()], c_transformed_threads[:, :, :, Threads.threadid()], w_tilde_hat_threads[:, :, :, Threads.threadid()], p, p_back)
             D[:, iμ, iν] .= vec(d_reshaped_threads[:, :, :, Threads.threadid()])
         end
