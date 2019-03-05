@@ -278,28 +278,21 @@ function W_times_vector(x, W_tilde, u_v_vv_conj, u_c_cc, W_workspace)
     p, p_back, X, B, C, D, E, F, c_reshaped_threads, c_padded_threads, d_reshaped_threads, d_padded_threads, c_transformed_threads, w_tilde_reshaped_threads, w_tilde_hat_threads, N_ks, N_qs = W_workspace
 
     X[:] .= x
-    @views for jk in 1:N_k
-        mul!(B[:, :, jk], u_v_vv_conj[:, :, jk], X[:, :, jk])
-        mul!(C[jk, :, :], u_c_cc[:, :, jk], transpose(B[:, :, jk]))
+    Threads.@threads for jk in 1:N_k
+        mul!(@view(B[:, :, jk]), @view(u_v_vv_conj[:, :, jk]), @view(X[:, :, jk]))
+        mul!(@view(C[jk, :, :]), @view(u_c_cc[:, :, jk]), transpose(@view(B[:, :, jk])))
     end
     Threads.@threads for iν in 1:N_ν
-        c_reshaped = c_reshaped_threads[:, :, :, Threads.threadid()]
-        c_padded =  c_padded_threads[:, :, :, Threads.threadid()]
-        d_reshaped = d_reshaped_threads[:, :, :, Threads.threadid()]
-        d_padded = d_padded_threads[:, :, :, Threads.threadid()]
-        c_transformed = c_transformed_threads[:, :, :, Threads.threadid()]
-        w_tilde_reshaped = w_tilde_reshaped_threads[:, :, :, Threads.threadid()]
-        w_tilde_hat = w_tilde_hat_threads[:, :, :, Threads.threadid()]
-        for iμ in 1:N_μ
-            c_reshaped[:] .= @view(C[:, iμ, iν])
-            w_tilde_reshaped[:] .= @view(W_tilde[:, iμ, iν])
-            w_conv!(d_reshaped, w_tilde_reshaped, c_reshaped, c_padded, d_padded, c_transformed, w_tilde_hat, p, p_back)
-            D[:, iμ, iν] .= @view(d_reshaped[:])
+        @views for iμ in 1:N_μ
+            c_reshaped_threads[:, :, :, Threads.threadid()] .= reshape(C[:, iμ, iν], N_ks)
+            w_tilde_reshaped_threads[:, :, :, Threads.threadid()] .= W_tilde[:, :, :, iμ, iν]
+            w_conv!(d_reshaped_threads[:, :, :, Threads.threadid()], w_tilde_reshaped_threads[:, :, :, Threads.threadid()], c_reshaped_threads[:, :, :, Threads.threadid()], c_padded_threads[:, :, :, Threads.threadid()], d_padded_threads[:, :, :, Threads.threadid()], c_transformed_threads[:, :, :, Threads.threadid()], w_tilde_hat_threads[:, :, :, Threads.threadid()], p, p_back)
+            D[:, iμ, iν] .= vec(d_reshaped_threads[:, :, :, Threads.threadid()])
         end
     end
-    @views for ik in 1:N_k
-        mul!(E[:, :, ik], transpose(D[ik, :, :]), conj.(u_c_cc[:, :, ik]))
-        mul!(F[:, :, ik], adjoint(u_v_vv_conj[:, :, ik]), E[:, :, ik])
+    Threads.@threads for ik in 1:N_k
+        mul!(@view(E[:, :, ik]), transpose(@view(D[ik, :, :])), conj.(@view(u_c_cc[:, :, ik])))
+        mul!(@view(F[:, :, ik]), adjoint(@view(u_v_vv_conj[:, :, ik])), @view(E[:, :, ik]))
     end
 
     return copy(vec(F))
