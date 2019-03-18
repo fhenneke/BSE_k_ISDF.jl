@@ -59,10 +59,10 @@ function assemble_V_tilde(prob, isdf)
 
     ζ_vc_hat = zeros(Complex{Float64}, size(ζ_vc))
     for iμ in 1:size(ζ_vc, 2)
-        ζ_vc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_vc[:, iμ], N_rs)))
+        ζ_vc_hat[:, iμ] = 1 / N_r * vec(fft(reshape(ζ_vc[:, iμ], N_rs)))
     end
 
-    V_tilde = 1 / (Ω0_vol * N_k) * ζ_vc_hat' * (v_hat .* ζ_vc_hat)
+    V_tilde = Ω0_vol / N_k * ζ_vc_hat' * (v_hat .* ζ_vc_hat)
 
     return V_tilde
 end
@@ -138,11 +138,11 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, N_qs, q_2bz_i
 
     ζ_vv_hat = zeros(Complex{Float64}, size(ζ_vv))
     for iμ in 1:size(ζ_vv, 2)
-        ζ_vv_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_vv[:, iμ], N_rs)))
+        ζ_vv_hat[:, iμ] = 1 / N_r * vec(fft(reshape(ζ_vv[:, iμ], N_rs)))
     end
     ζ_cc_hat = zeros(Complex{Float64}, size(ζ_cc))
     for iμ in 1:size(ζ_cc, 2)
-        ζ_cc_hat[:, iμ] = Ω0_vol / N_r * vec(fft(reshape(ζ_cc[:, iμ], N_rs)))
+        ζ_cc_hat[:, iμ] = 1 / N_r * vec(fft(reshape(ζ_cc[:, iμ], N_rs)))
     end
 
     W_tilde = complex(zeros(N_qs[1], N_qs[2], N_qs[3], N_μ, N_ν))
@@ -151,7 +151,7 @@ function assemble_W_tilde(w_hat, ζ_vv, ζ_cc, Ω0_vol, N_rs, N_k, N_qs, q_2bz_i
     # TODO: can this be written in terms of more general data structures as W_tilde[iq, :, :] = 1 / (Ω0_vol^2 * N_k) * ζ_cc_hat' * w_hat[iq] * ζ_vv_hat?
     for iq in 1:N_q
         G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
-        W_tilde_reshaped[iq, :, :] = 1 / (Ω0_vol^2 * N_k) *
+        W_tilde_reshaped[iq, :, :] = Ω0_vol / N_k *
             ζ_cc_hat[G_shift_indices, :]' * w_hat[q_2bz_ind[iq]][1] * ζ_vv_hat[G_shift_indices, :]
     end
 
@@ -328,10 +328,10 @@ function V_entry(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, N_ks)
     N_r = prod(N_rs)
     N_k = prod(N_ks)
 
-    U_vc_1_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
-    U_vc_2_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
+    U_vc_1_hat = 1 / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik]), N_rs)))
+    U_vc_2_hat = 1 / N_r * vec(fft(reshape(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk]), N_rs)))
 
-    v = 1 / (Ω0_vol * N_k) * U_vc_1_hat' * (v_hat .* U_vc_2_hat)
+    v = Ω0_vol / N_k * U_vc_1_hat' * (v_hat .* U_vc_2_hat)
 
     return v
 end
@@ -377,11 +377,11 @@ function W_entry(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, Ω0_vol, N_rs, ikkp2iq
 
     iq = ikkp2iq[ik, jk]
 
-    U_c_hat = Ω0_vol / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
-    U_v_hat = Ω0_vol / N_r * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
+    U_c_hat = 1 / N_r * vec(fft(reshape(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk]), N_rs)))
+    U_v_hat = 1 / N_r * vec(fft(reshape(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk]), N_rs)))
 
     G_shift_indices = vec(mapslices(G -> G_vector_to_index(G, N_rs), w_hat[q_2bz_ind[iq]][2] .+ q_2bz_shift[:, iq]; dims=1))
-    w = 1 / (Ω0_vol^2 * N_k) *
+    w = Ω0_vol / N_k *
         U_c_hat[G_shift_indices]' * (w_hat[q_2bz_ind[iq]][1] * U_v_hat[G_shift_indices])
 
     return w
