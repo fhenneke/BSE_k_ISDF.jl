@@ -103,7 +103,7 @@ the normalization b_mat^* * a_mat = 2π with the lattice vectors a_mat
 and the reciprocal vectors b_mat.
 """
 function BZ_volume(prob::AbstractBSEProblem)
-    return 2 * π / Ω0_volume(prob)
+    return (2 * π)^3 / Ω0_volume(prob)
 end
 
 """
