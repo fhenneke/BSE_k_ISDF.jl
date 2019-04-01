@@ -5,6 +5,9 @@
 diamond/
 diamond-reduced/
 graphene/
+helium_chain/
+graphene_1d/
+diamond_1d/
 
 results/
 results_*/
