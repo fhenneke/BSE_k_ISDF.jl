@@ -123,7 +123,7 @@ end
 function isdf_error(prob, isdf)
     error_M_vv = isdf_error(prob.u_v, isdf.ζ_vv, isdf.r_μ_vv_indices)
     error_M_cc = isdf_error(prob.u_c, isdf.ζ_cc, isdf.r_μ_cc_indices)
-    error_M_vc = isdf_error(prob.u_v, prob.u_c, isdf.ζ_vc, isdf.r_μ_vc_indices, N_k_samples)
+    error_M_vc = isdf_error(prob.u_v, prob.u_c, isdf.ζ_vc, isdf.r_μ_vc_indices)
     return error_M_vv, error_M_cc, error_M_vc
 end
 
@@ -171,7 +171,8 @@ end
 
 function isdf_error_estimate(u_i, ζ, r_μ_indices, N_k_samples)
     N_unit, N_i, N_k = size(u_i)
-    ik_samples = rand(1:N_k, N_k_samples)
+    rng = MersenneTwister(0)
+    ik_samples = rand(rng, 1:N_k, N_k_samples)
     error2 = 0.0
     normalization2 = 0.0
     col = zeros(Complex{Float64}, N_unit)
@@ -187,7 +188,8 @@ end
 function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
     N_unit, N_c, N_k = size(u_c)
     N_unit, N_v, N_k = size(u_v)
-    ik_samples = rand(1:N_k, N_k_samples)
+    rng = MersenneTwister(0)
+    ik_samples = rand(rng, 1:N_k, N_k_samples)
     error2 = 0.0
     normalization2 = 0.0
     col = zeros(Complex{Float64}, N_unit)
