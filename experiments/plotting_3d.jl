@@ -55,16 +55,16 @@ plot!(prod.(N_ks_vec), 4e-3 * prod.(N_ks_vec), ls = :dash, labels = L"O(N_k)")
 savefig(example_path * "/timings_k.pdf")
 
 # %% plotting of error in M
-example_path = "diamond/131313_20/"
+example_path = "diamond_1d/"
 
 N_μs_vec, errors_M_vv, errors_M_cc, errors_M_vc =  load(example_path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
 
 N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
 
-plot(title = "Error in ISDF", xlabel = L"N_\mu^{ij}", yscale = :log10, ylims = (1e-4, 1e0))
-plot!(N_μ_vec, errors_M_cc, m = :circ, label = L"M_{cc}")
-plot!(N_μ_vec, errors_M_vv, m = :square, label = L"M_{vv}")
-plot!(N_μ_vec, errors_M_vc, m = :diamond, label = L"M_{vc}")
+plot(title = "Error in ISDF", xlabel = L"N_\mu^{ij}", xscale = :log10, yscale = :log10, xlims = (N_μ_vec[1], N_μ_vec[end]), ylims = (1e-5, 2e0))
+plot!(N_μ_vec, errors_M_cc, m = :circ, label = L"Z^{cc}")
+plot!(N_μ_vec, errors_M_vv, m = :square, label = L"Z^{vv}")
+plot!(N_μ_vec, errors_M_vc, m = :diamond, label = L"Z^{vc}")
 
 savefig(example_path * "/errors_M.pdf")
 
