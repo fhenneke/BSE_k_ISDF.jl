@@ -12,6 +12,9 @@ diamond_1d/
 results/
 results_*/
 
+# pgfimages
+*.tex
+
 experiments.jl
 3d_experiments.jl
 
