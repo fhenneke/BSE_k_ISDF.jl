@@ -18,15 +18,19 @@ using BSE_k_ISDF
 
 # %% set up problem
 
-example_path = "diamond_1d/" # "graphene/"
+example_path = "diamond_1d"#"diamond/131313_20/" # "graphene/"
 
-N_1d = 20 # TODO: read from file
-N_rs = (N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
+# N_1d = 20 # TODO: read from file
+N_rs = (128, 5, 5)#(N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
 N_core = 0
 N_v = 4
-N_c = 10
-N_ks = (50, 1, 1) # (42, 42, 1) for graphene # TODO: read from file
+N_c = 3
+N_ks = (256, 1, 1) # (42, 42, 1) for graphene # TODO: read from file
 @time prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path);
+
+# %% exact Hamiltonian
+
+
 
 # %% error for different N_μ
 
@@ -34,65 +38,69 @@ N_k_samples = 20 #TODO: maybe set a little higher
 
 # variable parameters
 
-f = N_μ -> begin
-    N_1d = 1
-    while (N_1d + 1)^3 * 2 < N_μ
-        N_1d += 1
-    end
-    ((N_1d, N_1d, N_1d), N_μ - N_1d^3)
-end
+# f = N_μ -> begin
+#     N_1d = 1
+#     while (N_1d + 1)^3 * 2 < N_μ
+#         N_1d += 1
+#     end
+#     ((N_1d, N_1d, N_1d), N_μ - N_1d^3)
+# end
+# N_μs_vec = [f(N_μ) for N_μ in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500]]#, 600, 700, 800, 1000]] # only up to 350 for graphene
 
-N_μs_vec = [f(N_μ) for N_μ in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500]]#, 600, 700, 800, 1000]] # only up to 350 for graphene
+f = N_μ -> begin
+    ((N_μ, 5, 5), 0)
+end
+N_μs_vec = [f(N_μ) for N_μ in 1:30]
 
 u_v, u_c = prob.u_v, prob.u_c
 
-errors_M_vv = []
-errors_M_cc = []
-errors_M_vc = []
+errors_Z_vv = []
+errors_Z_cc = []
+errors_Z_vc = []
 
-for N_μ_vvs in N_μs_vec
+@time for N_μ_vvs in N_μs_vec
     r_μ_vv_indices = BSE_k_ISDF.find_r_μ(prob, N_μ_vvs[1], N_μ_vvs[2])
     ζ_vv = BSE_k_ISDF.assemble_ζ(u_v, r_μ_vv_indices)
-    error_M_vv = BSE_k_ISDF.isdf_error_estimate(u_v, ζ_vv, r_μ_vv_indices, N_k_samples)
-    # error_M_vv = BSE_k_ISDF.isdf_error(u_v, ζ_vv, r_μ_vv_indices)
+    error_Z_vv = BSE_k_ISDF.isdf_error_estimate(u_v, ζ_vv, r_μ_vv_indices, N_k_samples)
+    # error_Z_vv = BSE_k_ISDF.isdf_error(u_v, ζ_vv, r_μ_vv_indices)
 
-    push!(errors_M_vv, error_M_vv)
+    push!(errors_Z_vv, error_Z_vv)
 end
-for N_μ_ccs in N_μs_vec
+@time for N_μ_ccs in N_μs_vec
     r_μ_cc_indices = BSE_k_ISDF.find_r_μ(prob, N_μ_ccs[1], N_μ_ccs[2])
     ζ_cc = BSE_k_ISDF.assemble_ζ(u_c, r_μ_cc_indices)
-    error_M_cc = BSE_k_ISDF.isdf_error_estimate(u_c, ζ_cc, r_μ_cc_indices, N_k_samples)
-    # error_M_cc = BSE_k_ISDF.isdf_error(u_c, ζ_cc, r_μ_cc_indices)
+    error_Z_cc = BSE_k_ISDF.isdf_error_estimate(u_c, ζ_cc, r_μ_cc_indices, N_k_samples)
+    # error_Z_cc = BSE_k_ISDF.isdf_error(u_c, ζ_cc, r_μ_cc_indices)
 
-    push!(errors_M_cc, error_M_cc)
+    push!(errors_Z_cc, error_Z_cc)
 end
-for N_μ_vcs in N_μs_vec
+@time for N_μ_vcs in N_μs_vec
     r_μ_vc_indices = BSE_k_ISDF.find_r_μ(prob, N_μ_vcs[1], N_μ_vcs[2])
     ζ_vc = BSE_k_ISDF.assemble_ζ(u_v, u_c, r_μ_vc_indices)
-    error_M_vc = BSE_k_ISDF.isdf_error_estimate(u_v, u_c, ζ_vc, r_μ_vc_indices, N_k_samples)
-    # error_M_vc = BSE_k_ISDF.isdf_error(u_v, u_c, ζ_vc, r_μ_vc_indices)
+    error_Z_vc = BSE_k_ISDF.isdf_error_estimate(u_v, u_c, ζ_vc, r_μ_vc_indices, N_k_samples)
+    # error_Z_vc = BSE_k_ISDF.isdf_error(u_v, u_c, ζ_vc, r_μ_vc_indices)
 
-    push!(errors_M_vc, error_M_vc)
+    push!(errors_Z_vc, error_Z_vc)
 end
 
-save(example_path * "/errors_M.jld2", "N_μs_vec", N_μs_vec, "errors_M_vv", errors_M_vv, "errors_M_cc", errors_M_cc, "errors_M_vc", errors_M_vc)
+save(example_path * "/errors_Z.jld2", "N_μs_vec", N_μs_vec, "errors_Z_vv", errors_Z_vv, "errors_Z_cc", errors_Z_cc, "errors_Z_vc", errors_Z_vc)
 
 # %% compute spectra for different N_μ
 
 # load erros in M
-N_μs_vec, errors_M_vv, errors_M_cc, errors_M_vc =  load(example_path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
+N_μs_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_Z.jld2", "N_μs_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 # fixed parameters
 N_iter = 200
 
 #variable parameters
-M_tol_vec = [0.5, 0.25, 0.2]
+Z_tol_vec = [0.5, 0.25, 0.2]
 
 # compute spectra
-for M_tol in M_tol_vec
-    N_μ_vv = N_μs_vec[findfirst(errors_M_vv .<= M_tol)]
-    N_μ_cc = N_μs_vec[findfirst(errors_M_cc .<= M_tol)]
-    N_μ_vc = N_μs_vec[findfirst(errors_M_vc .<= M_tol)]
+for Z_tol in Z_tol_vec
+    N_μ_vv = N_μs_vec[findfirst(errors_Z_vv .<= Z_tol)]
+    N_μ_cc = N_μs_vec[findfirst(errors_Z_cc .<= Z_tol)]
+    N_μ_vc = N_μs_vec[findfirst(errors_Z_vc .<= Z_tol)]
 
     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
 
@@ -104,12 +112,47 @@ for M_tol in M_tol_vec
         α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), N_iter) # H + 0.01 * I for graphene
 
         # save results
-        save(example_path * "/optical_absorption_lanczos_$(M_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
+        save(example_path * "/optical_absorption_lanczos_$(Z_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
     end
 
     eigenvalues, eigenvectors = eigs(H, which=:SR, nev = 1, maxiter=1000)
 
-    save(example_path * "/eigs_$(M_tol).jld2", "eigenvalues", eigenvalues, "eigenvectors", eigenvectors)
+    save(example_path * "/eigs_$(Z_tol).jld2", "eigenvalues", eigenvalues, "eigenvectors", eigenvectors)
+end
+
+## compute spectra for different N_μ using full hamiltonian matrix
+# load erros in M
+N_μs_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_Z.jld2", "N_μs_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
+
+# fixed parameters
+N_iter = 200
+
+#variable parameters
+Z_tol_vec = [0.5, 0.1, 0.01, 0.001, 0.0001]
+
+# compute spectra
+for Z_tol in Z_tol_vec
+    N_μ_vv = N_μs_vec[findfirst(errors_Z_vv .<= Z_tol)]
+    N_μ_cc = N_μs_vec[findfirst(errors_Z_cc .<= Z_tol)]
+    N_μ_vc = N_μs_vec[findfirst(errors_Z_vc .<= Z_tol)]
+    println(N_μ_vv, N_μ_cc, N_μ_vc)
+
+    isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
+
+    H = BSE_k_ISDF.setup_H(prob, isdf)
+
+    for direction in 1:3
+        d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
+
+        α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), N_iter) # H + 0.01 * I for graphene
+
+        # save results
+        save(example_path * "/optical_absorption_lanczos_$(Z_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
+    end
+
+    # eigenvalues, eigenvectors = eigs(H, which=:SR, nev = 1, maxiter=1000)
+
+    # save(example_path * "/eigs_$(M_tol).jld2", "eigenvalues", eigenvalues, "eigenvectors", eigenvectors)
 end
 
 # %% save spectra for different M_tol and N_iter
