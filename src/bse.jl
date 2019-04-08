@@ -24,7 +24,7 @@ Create a linear operator for the application of `V` to a vector.
 The result is a hermitian `LinearMap` of size
 `(N_v * N_c * N_K, N_v * N_c * N_k)`.
 """
-function setup_V(prob::BSEProblemExciting, isdf::ISDF)
+function setup_V(prob::AbstractBSEProblem, isdf::ISDF)
     N_rs = size_r(prob)
     N_v, N_c, N_k = size(prob)
     Ω0_vol = Ω0_volume(prob)
@@ -99,7 +99,7 @@ The result is a hermitian `LinearMap` of size
 This corresponds to equation (2.35) in the paper. Instead of the
 final expression in the equation, the expression in the third row is used.
 """
-function setup_W(prob::BSEProblemExciting, isdf)
+function setup_W(prob::AbstractBSEProblem, isdf)
     N_v, N_c, N_k = size(prob)
     u_v_vv_conj = conj.(interpolation_coefficients(isdf)[1]) #TODO: test whether the conjugation is really necessary for performance
     u_c_cc = interpolation_coefficients(isdf)[2]
@@ -120,13 +120,11 @@ end
 Assembles a Matrix representation of ``W`` in the basis given by interpolation vectors of the ISDF.
 """ #TODO: better dispatch on problem type
 function assemble_W_tilde(prob::AbstractBSEProblem, isdf::ISDF)
-    w_hat = prob.w_hat
-    q_2bz_ind = prob.q_2bz_ind
-    q_2bz_shift = prob.q_2bz_shift
+    w_hat, q_2bz_ind, q_2bz_shift = compute_w_hat(prob)
 
     N_rs = size_r(prob)
     N_k = size(prob)[3]
-    N_qs = prob.N_k_diffs
+    N_qs = size_q(prob)
     Ω0_vol = Ω0_volume(prob)
 
     ζ_vv = interpolation_vectors(isdf)[1]
@@ -174,7 +172,7 @@ function create_W_workspace(prob::AbstractBSEProblem, isdf::ISDF)
     N_ks = size_k(prob)
     N_k = prod(N_ks)
     Ω0_vol = Ω0_volume(prob)
-    N_qs = prob.N_k_diffs
+    N_qs = size_q(prob)
 
     N_ν = size(isdf)[1]
     N_μ = size(isdf)[2]

@@ -156,7 +156,7 @@ function read_q_points_screenedcoulomb(N_ks, Ω0_vol, path)
     q_points_out = readdlm(path * "/QPOINTS_SCR.OUT")
     q_bz = float.(transpose(q_points_out[2:end, 2:4]))
 
-    N_k_diffs = (n -> n == 1 ? 1 : 2 * n).(N_ks) #double size unless size is 1
+    N_k_diffs = size_q(N_ks)
 
     # alternative q grid [0, 1[ ∪ [-1, 0[
     q_grid_1 = vcat(range(0, stop = 1, length = N_ks[1] + 1)[1:(end - 1)], range(-1, stop = 0, length = N_ks[1] + 1)[(end - (N_k_diffs[1] - N_ks[1])):(end - 1)])
@@ -236,6 +236,10 @@ end
 
 function compute_v_hat(prob::BSEProblemExciting)
     return compute_v_hat(prob, prob.gqmax)
+end
+
+function compute_w_hat(prob::BSEProblemExciting)
+    return prob.w_hat, prob.q_2bz_ind, prob.q_2bz_shift
 end
 
 function optical_absorption_vector(prob::BSEProblemExciting, direction)

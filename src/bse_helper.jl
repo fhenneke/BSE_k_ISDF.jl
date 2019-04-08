@@ -87,6 +87,18 @@ function k_lattice_to_reduced_bz(k_l, b_mat)
 end
 
 """
+    size_q(prob)
+
+Number of differences of k-points in the different directions.
+"""
+function size_q(prob::AbstractBSEProblem)
+    size_q(size_k(prob))
+end
+function size_q(N_ks::Tuple{Int,Int,Int})
+    return (n -> n == 1 ? 1 : 2 * n).(N_ks) # double size unless size is 1
+end
+
+"""
     Ω0_volume(prob)
 
 Return the volume of the unit cell.
