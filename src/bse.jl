@@ -404,10 +404,8 @@ function assemble_exact_W(prob)
     Ω0_vol = Ω0_volume(prob)
     u_v, u_c = orbitals(prob)
 
-    w_hat = prob.w_hat
-    ikkp2iq = ikkp2iq_matrix(prob.k_bz, prob.q_2bz)
-    q_2bz_ind = prob.q_2bz_ind
-    q_2bz_shift = prob.q_2bz_shift
+    w_hat, q_2bz_ind, q_2bz_shift = compute_w_hat(prob)
+    ikkp2iq = ikkp2iq_matrix(k_lattice(prob), q_lattice(prob))
 
     W_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
     @showprogress 1 "Assemble exact W ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
