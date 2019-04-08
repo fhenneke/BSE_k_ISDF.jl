@@ -47,6 +47,8 @@ end
     assemble_V_tilde(prob, isdf)
 
 Assembles a Matrix representation of ``V`` in the basis given by interpolation vectors of the ISDF.
+This corresponds to equation (2.33) in the paper.
+Compared to (2.33), the scaling factor 1 / N_k is included here.
 """
 function assemble_V_tilde(prob, isdf)
     N_rs = size_r(prob)
@@ -94,6 +96,8 @@ end
 Create a linear operator for the application of `W` to a vector.
 The result is a hermitian `LinearMap` of size
 `(N_v * N_c * N_K, N_v * N_c * N_k)`.
+This corresponds to equation (2.35) in the paper. Instead of the
+final expression in the equation, the expression in the third row is used.
 """
 function setup_W(prob::BSEProblemExciting, isdf)
     N_v, N_c, N_k = size(prob)
@@ -231,6 +235,7 @@ end
     V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
 
 Compute the product of ``V`` and `x`.
+Corresponds to equation (4.5) in the paper.
 """
 function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     N_μ = size(V_tilde, 1)
@@ -243,11 +248,11 @@ function V_times_vector(x, V_tilde, u_v_vc_conj, u_c_vc, V_workspace)
     @views for jk in 1:N_k
         mul!(B[:, :, jk], u_v_vc_conj[:, :, jk], X[:, :, jk])
     end
-    for jr in 1:N_μ
-        C[jr] = 0.0
-        for jc in 1:N_c
-            for jk in 1:N_k
-                C[jr] += u_c_vc[jr, jc, jk] * B[jr, jc, jk]
+    for jμ in 1:N_μ
+        C[jμ] = 0.0
+        for jk in 1:N_k
+            for jc in 1:N_c
+                C[jμ] += u_c_vc[jμ, jc, jk] * B[jμ, jc, jk]
             end
         end
     end
@@ -270,6 +275,7 @@ end
     W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
 
 Compute the product of ``W`` and `x`.
+Corresponds to equation (4.6) in the paper.
 """
 function W_times_vector(x, W_tilde_hat, u_v_vv_conj, u_c_cc, W_workspace)
     N_v = size(u_v_vv_conj, 2)
