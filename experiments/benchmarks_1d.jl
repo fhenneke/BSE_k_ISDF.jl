@@ -44,7 +44,21 @@ N_μ_vv = 16
 N_μ_vc = 21
 
 # variable parameters
-N_k_vec = 2 .^(4:12)
+N_k_vec = 2 .^(4:8)
+
+N_k = 256
+sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
+prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V, W)
+H = BSE_k_ISDF.setup_H(prob, isdf);
+
+direction = 1
+N_iter = 50
+σ = 0.1
+g = ω -> 1 / π * σ / (ω^2 + σ^2)
+E_min, E_max = 0.0, 30.0
+Erange = E_min:0.001:E_max
+
+optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, direction, N_iter, g, Erange)
 
 # benchmark loop
 
