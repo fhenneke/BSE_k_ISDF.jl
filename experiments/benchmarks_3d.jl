@@ -3,7 +3,6 @@
 # %%
 # loading packages
 using BenchmarkTools, JLD2, FileIO, LinearAlgebra, FFTW
-using Plots, LaTeXStrings
 
 BLAS.set_num_threads(1)
 FFTW.set_num_threads(1)
