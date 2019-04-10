@@ -2,7 +2,7 @@
 
 # single particle code
 # single particle problem
-using LinearAlgebra, SparseArrays
+using LinearAlgebra, SparseArrays, ProgressMeter
 
 #TODO: remove this type? just use it in setup of the bse problem?
 abstract type SPProblem end
@@ -24,7 +24,7 @@ end
 function SPProblem1D(V_sp, l, N_unit, N_k)
     r_unit = range(0, stop = l, length = N_unit + 1)[1:(end-1)]
     r_super = range(-div(N_k, 2) * l, stop = div(N_k + 1, 2) * l, length = N_unit * N_k + 1)[1:(end-1)]
-    k_bz = range(-pi / l, stop = pi / l, length = N_k + 1)[1:(end - 1)]
+    k_bz = range(0.0, stop = 1.0, length = N_k + 1)[1:(end - 1)]
 
     return SPProblem1D(V_sp, l, r_unit, r_super, k_bz)
 end
@@ -74,11 +74,11 @@ function solve(prob::SPProblem1D)
     V_sp = prob.V_sp
     l = prob.l
     r = prob.r_unit
-    k_bz = prob.k_bz
+    kc = 2 * pi / l * prob.k_bz
 
     ev = []
     ef = []
-    for k in k_bz
+    for k in kc
         H_k = Hermitian(Matrix(single_particle_hamiltonian(r, l, k, V_sp)))
         sol = eigen(H_k)
         push!(ev, sol.values)
@@ -148,7 +148,7 @@ function compute_hat_GGq(W, r_super, r_unit)
     L = N_k * l
 
     w = W.(r_super .+ r_unit', r_unit', l, L)
-    w_hat_vec = (-1).^((0:(N_k * N_unit - 1))) .* fft(w) * (l / N_unit)^2;
+    w_hat_vec = (-1).^((0:(N_k * N_unit - 1))) .* fft(w) * (l / N_unit^2);
 
     A = (iG, iGp, iq) -> begin
         if iq > div(N_k, 2)
@@ -214,10 +214,15 @@ end
 
 function compute_w_hat(prob::BSEProblem1D)
     N_k = prob.N_k
-    w_hat = [(prob.w_hat[:, :, iq], (1:128)' .* [1, 0, 0]) for iq in 1:N_k]
+    w_hat = [(prob.w_hat[:, :, iq], (0:127)' .* [1, 0, 0]) for iq in 1:N_k]
     q_2bz_ind = [1:N_k; 1:N_k]
-    q_2bz_shift = hcat(zeros(Int, 3, N_k), ones(Int, N_k)' .* [1, 0, 0])
+    q_2bz_shift = hcat(zeros(Int, 3, div(N_k, 2)), ones(Int, div(N_k, 2))' .* [1, 0, 0], -ones(Int, div(N_k, 2))' .* [1, 0, 0], zeros(Int, 3, div(N_k, 2)))
     return w_hat, q_2bz_ind, q_2bz_shift
+end
+
+function find_r_μ(prob::BSEProblem1D, N_μ::Int) # copy of this function in exciting_interface.jl
+    r_μ_indices = round.(Int, range(1, stop = size_r(prob)[1] + 1, length = N_μ + 1)[1:(end - 1)])
+    return r_μ_indices
 end
 
 function optical_absorption_vector(prob::BSEProblem1D, direction)
@@ -229,12 +234,12 @@ function optical_absorption_vector(u_v, u_c, E_v, E_c, r_unit, k_bz) # TODO: mak
     N_v = size(u_v, 2)
     N_c = size(u_c, 2)
     N_k = length(k_bz)
-    l = N_unit * (r_unit[2] - r_unit[1])
+    Δr = r_unit[2] - r_unit[1]
+    l = N_unit * Δr
 
-    d = vec([im * dot(u_c[:, ic, ik],
-                  modified_momentum_operator(r_unit, l, k_bz[ik]) *
-                    u_v[:, iv, ik]) /
-            (E_c[ic, ik] - E_v[iv, ik])
+    d = vec([im * Δr * dot(u_c[:, ic, ik],
+                  modified_momentum_operator(r_unit, l, 2 * pi / l * k_bz[ik]) *
+                    u_v[:, iv, ik]) / (E_c[ic, ik] - E_v[iv, ik])
             for iv in 1:N_v, ic in 1:N_c, ik in 1:N_k])
 
     return d
@@ -242,7 +247,7 @@ end
 
 # reference implementations for testing
 
-function V_entry_realspace(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
+function V_entry_realspace(V_func, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
     N_unit = size(u_v, 1)
     N_cells = div(length(r_super), N_unit)
     Δr = r_super[2] - r_super[1]
@@ -253,44 +258,32 @@ function V_entry_realspace(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
         for (jr, r_2) in enumerate(r_unit)
             diff_r = supercell_difference(r_1, r_2, L)
             v += (conj(u_c[mod1(ir, N_unit), ic, ik]) * u_v[mod1(ir, N_unit), iv, ik]) *
-                V(diff_r, 0.) *
+                V_func(diff_r, 0.) *
                 (conj(u_v[jr, jv, jk]) * u_c[jr, jc, jk])
         end
     end
     return Δr^2 * v / N_cells
 end
+function assemble_exact_V_realspace(prob::BSEProblem1D, V_func)
+    r_super = prob.prob.r_super
+    r_unit = prob.prob.r_unit
+    N_v = prob.N_v
+    N_c = prob.N_c
+    N_k = prob.N_k
+    u_v = prob.u_v
+    u_c = prob.u_c
 
-function V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
-    N_unit = length(r_unit)
-    N_cells = div(length(r_super), N_unit)
-    Δr = r_unit[2] - r_unit[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    U_vc_1_hat = fft(u_c[:, ic, ik] .* conj.(u_v[:, iv, ik])) * (l / N_unit)
-    U_vc_2_hat = fft(u_c[:, jc, jk] .* conj.(u_v[:, jv, jk])) * (l / N_unit)
-
-    v = 1 / L * U_vc_1_hat' * (v_hat[:, 1] .* U_vc_2_hat)
-
-    return v
-end
-
-function W_entry_realspace(W, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-    N_unit = size(u_v, 1)
-    N_cells = div(length(r_super), N_unit)
-    Δr = r_super[2] - r_super[1]
-    l = N_unit * Δr
-    L = N_cells * l
-
-    w = complex(0.)
-    for (ir, r_1) in enumerate(r_super)
-        for (jr, r_2) in enumerate(r_unit)
-            w += (conj(u_c[mod1(ir, N_unit), ic, ik]) * u_c[mod1(ir, N_unit), jc, jk]) *
-                exp(-im * (k_bz[ik] - k_bz[jk]) * (r_1 - r_2)) * W(r_1, r_2, l, L) *
-                (conj(u_v[jr, jv, jk]) * u_v[jr, iv, ik])
-        end
+    V_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
+    @showprogress 1 "Assemble exact V ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+        V_reshaped[iv, ic, ik, jv, jc, jk] =
+            V_entry_realspace(V_func, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
     end
-    return Δr^2 * w / N_cells
+    V = reshape(V_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
+    for i in 1:(N_v * N_c * N_k)
+        V[i, i] = real(V[i, i])
+    end
+
+    return V
 end
 
 function W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
@@ -313,47 +306,28 @@ function W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, 
     U_c_hat_shift = circshift(fft(u_c[:, ic, ik] .* conj.(u_c[:, jc, jk])), -G_shift) * (l / N_unit)
     U_v_hat_shift = circshift(fft(u_v[:, iv, ik] .* conj.(u_v[:, jv, jk])), -G_shift) * (l / N_unit)
 
-    w = 1 / (l * L) * U_c_hat_shift' * (@view(w_hat[:, :, ijk]) * U_v_hat_shift)
+    w = 1 / L * U_c_hat_shift' * (@view(w_hat[:, :, ijk]) * U_v_hat_shift)
 
     return w
 end
+function W_entry_realspace(W_func, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+    N_unit = size(u_v, 1)
+    N_cells = div(length(r_super), N_unit)
+    Δr = r_super[2] - r_super[1]
+    l = N_unit * Δr
+    L = N_cells * l
 
-function H_entry_realspace(V, W, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
-    (E_c[ic, ik] - E_v[iv, ik]) * (iv == jv) * (ic == jc) * (ik == jk) +
-        2 * V_entry_realspace(V, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit) -
-        W_entry_realspace(W, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-end
-
-function H_entry_fast(v_hat, w_hat, iv, ic, ik, jv, jc, jk, E_v, E_c, u_v, u_c, r_super, r_unit, k_bz)
-    (E_c[ic, ik] - E_v[iv, ik]) * (iv == jv) * (ic == jc) * (ik == jk) +
-        2 * V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit) -
-        W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
-end
-
-function assemble_exact_V_1d(prob)
-    r_super = prob.prob.r_super
-    r_unit = prob.prob.r_unit
-    N_v = prob.N_v
-    N_c = prob.N_c
-    N_k = prob.N_k
-    u_v = prob.u_v
-    u_c = prob.u_c
-    v_hat = prob.v_hat
-
-    V_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
-        V_reshaped[iv, ic, ik, jv, jc, jk] =
-            V_entry_fast(v_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit)
+    w = complex(0.)
+    for (ir, r_1) in enumerate(r_super)
+        for (jr, r_2) in enumerate(r_unit)
+            w += (conj(u_c[mod1(ir, N_unit), ic, ik]) * u_c[mod1(ir, N_unit), jc, jk]) *
+                exp(-im * 2 * pi / l * (k_bz[ik] - k_bz[jk]) * (r_1 - r_2)) * W_func(r_1, r_2, l, L) *
+                (conj(u_v[jr, jv, jk]) * u_v[jr, iv, ik])
+        end
     end
-    V = reshape(V_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
-    for i in 1:(N_v * N_c * N_k)
-        V[i, i] = real(V[i, i])
-    end
-
-    return V
+    return Δr^2 * w / N_cells
 end
-
-function assemble_exact_W_1d(prob)
+function assemble_exact_W_realspace(prob::BSEProblem1D, W_func)
     r_super = prob.prob.r_super
     r_unit = prob.prob.r_unit
     k_bz = prob.prob.k_bz
@@ -362,12 +336,11 @@ function assemble_exact_W_1d(prob)
     N_k = prob.N_k
     u_v = prob.u_v
     u_c = prob.u_c
-    w_hat = prob.w_hat
 
     W_reshaped = zeros(Complex{Float64}, N_v, N_c, N_k, N_v, N_c, N_k)
-    for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
+    @showprogress 1 "Assemble exact W ..." for jk in 1:N_k, jc in 1:N_c, jv in 1:N_v, ik in 1:N_k, ic in 1:N_c, iv in 1:N_v
         W_reshaped[iv, ic, ik, jv, jc, jk] =
-            W_entry_fast(w_hat, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
+            W_entry_realspace(W_func, iv, ic, ik, jv, jc, jk, u_v, u_c, r_super, r_unit, k_bz)
     end
     W = reshape(W_reshaped, N_v * N_c * N_k, N_v * N_c * N_k)
     for i in 1:(N_v * N_c * N_k)

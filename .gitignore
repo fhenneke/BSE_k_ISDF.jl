@@ -8,6 +8,7 @@ graphene/
 helium_chain/
 graphene_1d/
 diamond_1d/
+1d_old/
 
 results/
 results_*/
