@@ -3,7 +3,9 @@
 import JLD2
 import FileIO: load
 import BenchmarkTools: Trial, Parameters
-using Plots, LaTeXStrings, LinearAlgebra
+using PGFPlotsX, Plots, LaTeXStrings, LinearAlgebra
+
+push!(PGFPlotsX.CUSTOM_PREAMBLE, "\\usepgfplotslibrary{colorbrewer}")
 
 pyplot()
 
@@ -41,22 +43,39 @@ savefig("results_" * example_string * "/band_structure.pdf")
 
 # %% plot benchmark results
 
-N_unit = 128
-N_k_vec = 2 .^(4:12)
+N_k_vec, setup_times, evaluation_times =  load("1d_old/benchmark.jld2", "N_k_vec", "setup_times", "evaluation_times")
 
-results = [load("results_" * example_string * "/benchmark_$(N_unit)_$(N_k).jld2") for N_k in N_k_vec]
-timings = ["t_isdf", "t_H_setup", "t_H_x"]
+# plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
+# plot!(N_k_vec, setup_times, m = :circ, labels = "initial setup", xscale = :log2, yscale = :log10)
+# plot!(N_k_vec, evaluation_times, m = :square, labels = "matrix vector product")
+# plot!(N_k_vec, 1e-4 * N_k_vec, ls = :dash, labels = L"O(N_k)")
+# savefig("results_" * example_string * "/timings_k.pdf")
 
-setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
-evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
+using PGFPlotsX
 
-plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
-plot!(N_k_vec, setup_times, m = :circ, labels = "initial setup", xscale = :log2, yscale = :log10)
-plot!(N_k_vec, evaluation_times, m = :square, labels = "matrix vector product")
-# plot!(N_k_vec, (0.5 * 80 * 1e-6 * 20^2) * N_k_vec.^2, ls = :dash, labels = "entrywise assembly of Hamiltonian")
-plot!(N_k_vec, 1e-4 * N_k_vec, ls = :dash, labels = L"O(N_k)")
+theme = @pgf {
+    "cycle list/Dark2-8",
+    mark_options = "solid",
+    line_width = "1.5pt",
+    grid = "major"}
 
-savefig("results_" * example_string * "/timings_k.pdf")
+fig = @pgf LogLogAxis(
+        {theme...,
+        title = "run time scaling", xlabel = "\$N_k\$", ylabel = "time [s]",
+        legend_pos = "south east",
+        "width = 0.98\\textwidth"},
+        PlotInc({mark = "*"},
+            Table(; x = N_k_vec, y = setup_times)),
+        LegendEntry("initial setup"),
+        PlotInc({mark = "square*"},
+            Table(; x = N_k_vec, y = evaluation_times)),
+        LegendEntry("matrix vector product"),
+        PlotInc({"dashed"},
+            Table(; x = N_k_vec, y = 1e-4 * N_k_vec)),
+        LegendEntry("\$O(N_k)\$"))
+
+pgfsave("1d_old_timings_k.tex", fig, include_preamble = false)
+
 
 # %% plot benchmark results for different N_μ
 
