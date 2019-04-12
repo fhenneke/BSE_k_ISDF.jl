@@ -290,6 +290,52 @@ function find_r_μ(prob::BSEProblemExciting, N_μ_irs::Tuple, N_μ_mt::Int)
     return r_μ_indices
 end
 
+function find_r_μ(prob::BSEProblemExciting, N_μs_ir::Tuple, N_μs_mt::Tuple)
+    # coarse uniform grid (interstitial region and muffin tin region)
+    N_rs = size_r(prob)
+    N_r = prod(N_rs)
+
+    grid_1 = find_r_μ_uniform(N_rs[1], N_μs_ir[1])
+    grid_2 = find_r_μ_uniform(N_rs[2], N_μs_ir[2])
+    grid_3 = find_r_μ_uniform(N_rs[3], N_μs_ir[3])
+    r_μ_mask_1 = zeros(N_rs[1])
+    r_μ_mask_2 = zeros(N_rs[2])
+    r_μ_mask_3 = zeros(N_rs[3])
+    r_μ_mask_1[grid_1] .= 1.0
+    r_μ_mask_2[grid_2] .= 1.0
+    r_μ_mask_3[grid_3] .= 1.0
+    r_μ_mask = Bool.(kron(r_μ_mask_3, r_μ_mask_2, r_μ_mask_1))
+
+    # fine uniform grid (interonly in muffin tin region)
+    r_mask_mt = zeros(Bool, N_r)
+
+    grid_1_fine = find_r_μ_uniform(N_rs[1], N_μs_mt[1])
+    grid_2_fine = find_r_μ_uniform(N_rs[2], N_μs_mt[2])
+    grid_3_fine = find_r_μ_uniform(N_rs[3], N_μs_mt[3])
+    r_μ_mask_1_fine = zeros(N_rs[1])
+    r_μ_mask_2_fine = zeros(N_rs[2])
+    r_μ_mask_3_fine = zeros(N_rs[3])
+    r_μ_mask_1_fine[grid_1_fine] .= 1.0
+    r_μ_mask_2_fine[grid_2_fine] .= 1.0
+    r_μ_mask_3_fine[grid_3_fine] .= 1.0
+    r_μ_mask_fine = Bool.(kron(r_μ_mask_3_fine, r_μ_mask_2_fine, r_μ_mask_1_fine))
+    r_μ_ind_fine = findall(r_μ_mask_fine)
+
+    for atom in prob.atoms
+        for ir in r_μ_ind_fine
+            for is in -1:1, js in -1:1, ms in -1:1
+                if norm(prob.r_cartesian[:, ir] - prob.a_mat * (atom[:position] + [is, js, ms])) < atom[:mt_radius]
+                    r_μ_mask[ir] = true
+                end
+            end
+        end
+    end
+
+    r_μ_indices = findall(r_μ_mask)
+
+    return r_μ_indices
+end
+
 function find_r_μ(prob::BSEProblemExciting, N_μ::Int)
     # splits the points roughly equal among uniform grid and each of the atoms
     N_atoms = length(prob.atoms)
