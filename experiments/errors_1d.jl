@@ -81,24 +81,28 @@ N_core = 0
 N_v = 4
 N_c = 5
 N_k = 256
-# N_core = 3
-# N_v = 1
-# N_c = 1
-# N_k = 4096
 
 # set up problem
-sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
-prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V, W)
+sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k);
+prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V_func, W_func);
 
 # compute reference Hamiltonian
-t_H_entry = @benchmark BSE_k_ISDF.H_entry_fast($prob.v_hat, $prob.w_hat, 1, 1, 15, 1, 1, 60, $prob.E_v, $prob.E_c, $prob.u_v, $prob.u_c, $prob.prob.r_super, $prob.prob.r_unit, $prob.prob.k_bz)
+t_V_entry = @benchmark BSE_k_ISDF.V_entry($prob.v_hat, 1, 1, 15, 1, 1, 60, $prob.u_v, $prob.u_c, $l, $(BSE_k_ISDF.size_r(prob)), $(BSE_k_ISDF.size_k(prob)))
+w_hat, q_2bz_ind, q_2bz_shift = BSE_k_ISDF.compute_w_hat(prob);
+ikkp2iq = BSE_k_ISDF.ikkp2iq_matrix(BSE_k_ISDF.k_lattice(prob), BSE_k_ISDF.q_lattice(prob));
+t_W_entry = @benchmark BSE_k_ISDF.W_entry($w_hat, 1, 1, 15, 1, 1, 60, $prob.u_v, $prob.u_c, $l, $(BSE_k_ISDF.size_r(prob)), $ikkp2iq, $q_2bz_ind, $q_2bz_shift)
 
-println("estimated time to assemble H_exact is ", mean(t_H_entry).time * (N_v * N_c * N_k)^2 / 2 * 1e-9, " seconds")
+println("estimated time to assemble H_exact is ", (mean(t_V_entry).time + mean(t_W_entry).time) * (N_v * N_c * N_k)^2 * 1e-9, " seconds")
 sleep(1) # to make sure the estimated time is printed
 
-@time H_exact = BSE_k_ISDF.assemble_exact_H(prob)
+D = BSE_k_ISDF.setup_D(prob);
+V_exact = BSE_k_ISDF.assemble_exact_V(prob)
+W_exact = BSE_k_ISDF.assemble_exact_W(prob)
+H_exact = D + 2 * V_exact - W_exact
+
 @time F = eigen(H_exact)
-save("results_" * example_string * "/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", H_exact, "ev", F.values, "ef", F.vectors)
+
+save("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", H_exact, "ev", F.values, "ef", F.vectors)
 
 # %% copute error in H for different errors in M (it might not be necessary to compute this)
 
@@ -107,20 +111,22 @@ N_unit = 128
 N_core = 0
 N_v = 4
 N_c = 5
-N_k = 128
+N_k = 256
 
-H_exact = load("results_" * example_string * "/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact")
+H_exact = load("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact")
+
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc = load("1d_old/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 N_μ_vv_vec = []
 N_μ_cc_vec = []
 N_μ_vc_vec = []
 errors_H = []
 
-M_tol_vec = [0.8, 0.4, 0.2, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
-for M_tol in M_tol_vec
-    N_μ_vv = findfirst(errors_M_vv .<= M_tol)
-    N_μ_cc = findfirst(errors_M_cc .<= M_tol)
-    N_μ_vc = findfirst(errors_M_vc .<= M_tol)
+Z_tol_vec = [0.8, 0.4, 0.2, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
+for Z_tol in Z_tol_vec
+    N_μ_vv = N_μ_vec[findfirst(errors_Z_vv .<= Z_tol)]
+    N_μ_cc = N_μ_vec[findfirst(errors_Z_cc .<= Z_tol)]
+    N_μ_vc = N_μ_vec[findfirst(errors_Z_vc .<= Z_tol)]
 
     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
 
@@ -136,7 +142,7 @@ for M_tol in M_tol_vec
     push!(errors_H, error_H)
 end
 
-save("results_" * example_string * "/errors_H_$(N_unit)_$(N_k).jld2", "M_tol_vec", M_tol_vec, "N_μ_vv_vec", N_μ_vv_vec, "N_μ_cc_vec", N_μ_cc_vec, "N_μ_vc_vec", N_μ_vc_vec, "errors_H", errors_H)
+save("1d_old/errors_H_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "Z_tol_vec", Z_tol_vec, "N_μ_vv_vec", N_μ_vv_vec, "N_μ_cc_vec", N_μ_cc_vec, "N_μ_vc_vec", N_μ_vc_vec, "errors_H", errors_H)
 
 # %% compute reference absorption spectrum
 
@@ -147,10 +153,6 @@ N_core = 0
 N_v = 4
 N_c = 5
 N_k = 256
-# N_core = 3
-# N_v = 1
-# N_c = 1
-# N_k = 4096
 
 # broadening
 σ = 0.1
