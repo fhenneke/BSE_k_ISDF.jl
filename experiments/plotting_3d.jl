@@ -58,16 +58,23 @@ plot!(prod.(N_ks_vec), 4e-3 * prod.(N_ks_vec), ls = :dash, labels = L"O(N_k)")
 savefig(example_path * "/timings_k.tex")
 
 # same plot with PGFPlotsX
-using PGFPlotsX
 
-theme = @pgf {
+example_path = "diamond/"
+
+N_μ_vvs = ((2, 2, 2), (4, 4, 4))
+N_μ_ccs = ((4, 4, 4), (7, 7, 7))
+N_μ_vcs = ((4, 4, 4), (5, 5, 5))
+
+N_ks_vec, setup_times, evaluation_times =  load(example_path * "/benchmark_$(N_μ_vvs)_$(N_μ_ccs)_$(N_μ_vcs).jld2", "N_ks_vec", "setup_times", "evaluation_times")
+
+fig_theme = @pgf {
     "cycle list/Dark2-8",
     mark_options = "solid",
     line_width = "1.5pt",
     grid = "major"}
 
 fig = @pgf LogLogAxis(
-        {theme...,
+        {fig_theme...,
         title = "run time scaling", xlabel = "\$N_k\$", ylabel = "time [s]",
         legend_pos = "south east",
         "width = 0.98\\textwidth"},
@@ -78,7 +85,7 @@ fig = @pgf LogLogAxis(
             Table(; x = prod.(N_ks_vec), y = evaluation_times)),
         LegendEntry("matrix vector product"),
         PlotInc({"dashed"},
-            Table(; x = prod.(N_ks_vec), y = 4e-3 * prod.(N_ks_vec))),
+            Table(; x = prod.(N_ks_vec), y = 3e-3 * prod.(N_ks_vec))),
         LegendEntry("\$O(N_k)\$"))
 
 pgfsave("diamond_timings_k.tex", fig, include_preamble = false)
@@ -86,26 +93,24 @@ pgfsave("diamond_timings_k.tex", fig, include_preamble = false)
 # %% plotting of error in M
 example_path = "diamond/131313_20"
 
-N_μs_vec, errors_M_vv, errors_M_cc, errors_M_vc =  load(example_path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
-N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
+# N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
 
 plot(title = "Error in ISDF", xlabel = L"N_\mu^{ij}", xscale = :log10, yscale = :log10, xlims = (N_μ_vec[1], N_μ_vec[end]), ylims = (1e-5, 2e0))
-plot!(N_μ_vec, errors_M_cc, m = :circ, label = L"Z^{cc}")
-plot!(N_μ_vec, errors_M_vv, m = :square, label = L"Z^{vv}")
-plot!(N_μ_vec, errors_M_vc, m = :diamond, label = L"Z^{vc}")
+plot!(N_μ_vec, errors_Z_cc, m = :circ, label = L"Z^{cc}")
+plot!(N_μ_vec, errors_Z_vv, m = :square, label = L"Z^{vv}")
+plot!(N_μ_vec, errors_Z_vc, m = :diamond, label = L"Z^{vc}")
 
 savefig(example_path * "/errors_M.pdf")
 
 # same lot with PGFPlotsX
 example_path = "diamond/131313_20"
 
-N_μs_vec, errors_M_vv, errors_M_cc, errors_M_vc =  load(example_path * "/errors_M.jld2", "N_μs_vec", "errors_M_vv", "errors_M_cc", "errors_M_vc")
-
-N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 fig = @pgf Axis(
-        {theme...,
+        {fig_theme...,
         title = "Error in ISDF", xlabel = "\$N_\\mu^{ij}\$", ylabel = "time [s]",
         legend_entries = {"\$Z^{cc}\$", "\$Z^{vv}\$", "\$Z^{vc}\$"},
         xmin = N_μ_vec[1], xmax = N_μ_vec[end], ymin = 3e-4, ymax = 1e0,
@@ -113,11 +118,11 @@ fig = @pgf Axis(
         # legend_pos = "south east",
         "width = 0.98\\textwidth"},
         PlotInc({"solid", mark = "*"},
-            Table(; x = N_μ_vec, y = errors_M_cc)),
+            Table(; x = N_μ_vec, y = errors_Z_cc)),
         PlotInc({"dashed", mark = "cube*"},
-            Table(; x = N_μ_vec, y = errors_M_vv)),
+            Table(; x = N_μ_vec, y = errors_Z_vv)),
         PlotInc({"dotted", mark = "triangle*"},
-            Table(; x = N_μ_vec, y = errors_M_vc)))
+            Table(; x = N_μ_vec, y = errors_Z_vc)))
 
 pgfsave("diamond/131313_20/errors_isdf.tex", fig, include_preamble = false)
 
