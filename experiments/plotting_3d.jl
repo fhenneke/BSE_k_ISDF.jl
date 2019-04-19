@@ -7,6 +7,12 @@ using PGFPlotsX, Plots, LaTeXStrings, LinearAlgebra, Statistics, DelimitedFiles
 
 push!(PGFPlotsX.CUSTOM_PREAMBLE, "\\usepgfplotslibrary{colorbrewer}")
 
+fig_theme = @pgf {
+    "cycle list/Dark2-8",
+    mark_options = "solid",
+    line_width = "1.5pt",
+    grid = "major"}
+
 # pyplot()
 pgfplots()
 
@@ -37,6 +43,30 @@ p2 = Makie.scatter(prob.r_cartesian[1, :], prob.r_cartesian[2, :], prob.r_cartes
 
 scene = AbstractPlotting.vbox(p1, p2)
 
+# %% plot interpolation points
+
+r_μ_vv = load("diamond/131313_20/real_space_grid_30.jld2", "r_μ_vv")
+N_μ_vv = 50
+
+r_μ_cc = load("diamond/131313_20/real_space_grid_30.jld2", "r_μ_cc")
+N_μ_cc = 50
+
+fig = @pgf Axis(
+        {fig_theme...,
+        title = "interpolation points", xlabel = "\$x\$ in [au]", ylabel = "\$y\$ in [au]", zlabel = "\$z\$ in [au]",
+        # legend_pos = "south east",
+        "width = 0.98\\textwidth"},
+        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt", opacity = 0.5},
+            Table(; x = r_μ_vv[1, 1:N_μ_vv], y = r_μ_vv[2, 1:N_μ_vv], z = r_μ_vv[3, 1:N_μ_vv])),
+        LegendEntry("valence"),
+        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt", opacity = 0.5},
+            Table(; x = r_μ_cc[1, 1:N_μ_cc], y = r_μ_cc[2, 1:N_μ_cc], z = r_μ_cc[3, 1:N_μ_cc])),
+        LegendEntry("conduction"),
+        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt"},
+            Table(; x = [0.0, 1.68658], y = [0.0, 1.68658], z = [0.0, 1.68658])),
+        LegendEntry("positions of nuclei"))
+
+pgfsave("diamond_interpolation_points.tex", fig, include_preamble = false)
 
 
 # %% plot benchmark results for diamond
@@ -66,12 +96,6 @@ N_μ_ccs = ((4, 4, 4), (7, 7, 7))
 N_μ_vcs = ((4, 4, 4), (5, 5, 5))
 
 N_ks_vec, setup_times, evaluation_times =  load(example_path * "/benchmark_$(N_μ_vvs)_$(N_μ_ccs)_$(N_μ_vcs).jld2", "N_ks_vec", "setup_times", "evaluation_times")
-
-fig_theme = @pgf {
-    "cycle list/Dark2-8",
-    mark_options = "solid",
-    line_width = "1.5pt",
-    grid = "major"}
 
 fig = @pgf LogLogAxis(
         {fig_theme...,
@@ -113,7 +137,7 @@ fig = @pgf Axis(
         {fig_theme...,
         title = "Error in ISDF", xlabel = "\$N_\\mu^{ij}\$", ylabel = "time [s]",
         legend_entries = {"\$Z^{cc}\$", "\$Z^{vv}\$", "\$Z^{vc}\$"},
-        xmin = N_μ_vec[1], xmax = N_μ_vec[end], ymin = 3e-4, ymax = 1e0,
+        xmin = N_μ_vec[1], xmax = N_μ_vec[end], ymin = 1e-4, ymax = 1e0,
         ymode = "log",
         # legend_pos = "south east",
         "width = 0.98\\textwidth"},

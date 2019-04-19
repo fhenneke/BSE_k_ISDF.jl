@@ -1,4 +1,5 @@
 # ISDF
+import Random: randperm#, MersenneTwister # TODO: sort out imports
 
 """
     ISDF type
@@ -22,6 +23,11 @@ struct ISDF
     ζ_cc
     ζ_vc
 end
+
+# abstract type AbstractInterpolationMethod
+# end
+
+# struct UniformInterpolation <: AbstractInterpolationMethod
 
 """
     size(isdf)
@@ -73,24 +79,89 @@ function ISDF(prob::AbstractBSEProblem, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int
     return ISDF(prob, r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices)
 end
 
+# """
+#     find_r_μ(prob, N_μ)
+
+# Return an array of `N_μ` indices corresponding to interpolation
+# points in the unit cell.
+# """
+# function find_r_μ(prob::AbstractBSEProblem, N_μ::Int)
+#     # generic implementation chooses pseudo random points
+#     N_rs = size_r(prob)
+#     N_r = prod(N_rs)
+
+#     r_mask = zeros(Bool, N_rs)
+#     shifts = (sqrt(2), sqrt(3), sqrt(5))
+#     for i in 1:N_μ
+#         r_mask[CartesianIndex(ceil.(Int, mod.(i .* shifts, 1.0) .* N_rs))] = true
+#     end
+#     r_μ_indices = findall(vec(r_mask))
+#     return r_μ_indices
+# end
+
 """
     find_r_μ(prob, N_μ)
 
-Return an array of `N_μ` indices corresponding to interpolation
-points in the unit cell.
+Return an array of indices corresponding to interpolation
+points in the unit cell. The points are computed via the algorithm proposed in
+Lu, Ying; 2016; Fast Allgorithm for periodic Fitting for Bloch Waves
 """
-function find_r_μ(prob::AbstractBSEProblem, N_μ::Int)
-    # generic implementation chooses pseudo random points
-    N_rs = size_r(prob)
-    N_r = prod(N_rs)
+function find_r_μ_old(u_i, N_μ, N_sub)
+    N_r, N_v, N_k = size(u_i)
+    
+    random_phase = rand(MersenneTwister(42), N_v * N_k)
+    U_i = transpose(cos.(2 .* pi .* random_phase) .+ im * sin.(2 .* pi .* random_phase)) .* reshape(u_i, N_r, N_v * N_k)
+    fft!(U_i, 2)
+    sub_ind = randperm(MersenneTwister(42), N_v * N_k)[1:N_sub]
+    U_i_sub = U_i[:, sub_ind]
+    M = reshape(conj.(reshape(U_i_sub, N_r, :, 1)) .* reshape(U_i_sub, N_r, 1, :), N_r, :)
+    F = qr(transpose(M), Val(true));
+    # r_μ_vv_indices = F.p[1:(findfirst(x -> x < 1e-2, abs.(diag(F.R)) ./ abs(F.R[1, 1])) - 1)]
+    r_μ_i_indices = F.p[1:N_μ]
+    return r_μ_i_indices
+end
 
-    r_mask = zeros(Bool, N_rs)
-    shifts = (sqrt(2), sqrt(3), sqrt(5))
-    for i in 1:N_μ
-        r_mask[CartesianIndex(ceil.(Int, mod.(i .* shifts, 1.0) .* N_rs))] = true
+function find_r_μ(u_i, N_μ, N_sub)
+    return find_r_μ_qrcp(u_i, N_μ, N_sub)[1][1:N_μ]
+end
+function find_r_μ_qrcp(u_i, N_sub)
+    N_r, N_i, N_k = size(u_i)
+    
+    random_phase = rand(MersenneTwister(42), N_i * N_k)
+    random_unit_complex = cos.(2 .* pi .* random_phase) .+ im * sin.(2 .* pi .* random_phase)
+    u_i_r_transformed = zeros(Complex{Float64}, N_i * N_k)
+    sub_ind = randperm(MersenneTwister(42), N_i * N_k)[1:N_sub]
+    M = zeros(Complex{Float64}, N_sub^2, N_r)
+    for ir in 1:N_r
+        u_i_r_transformed[:] .= random_unit_complex .* vec(u_i[ir, :, :])
+        fft!(u_i_r_transformed)
+        M[:, ir] = vec(conj.(reshape(u_i_r_transformed[sub_ind], :, 1)) .* reshape(u_i_r_transformed[sub_ind], 1, :))
     end
-    r_μ_indices = findall(vec(r_mask))
-    return r_μ_indices
+    F = qr(M, Val(true))
+
+    return F.p, abs.(diag(F.R))
+end
+
+function find_r_μ(u_v, u_c, N_μ, N_sub)
+    return find_r_μ_qrcp(u_v, u_c, N_sub)[1][1:N_μ]
+end
+function find_r_μ_qrcp(u_v, u_c, N_sub)
+    N_r, N_v, N_k = size(u_v)
+    N_r, N_c, N_k = size(u_c)
+    
+    random_phase = rand(MersenneTwister(42), N_v * N_c * N_k)
+    random_unit_complex = cos.(2 .* pi .* random_phase) .+ im * sin.(2 .* pi .* random_phase)
+    u_vc_r_transformed = zeros(Complex{Float64}, N_v * N_c * N_k)
+    sub_ind = randperm(MersenneTwister(42), N_v * N_k)[1:N_sub]
+    M = zeros(Complex{Float64}, N_sub, N_r)
+    for ir in 1:N_r
+        u_vc_r_transformed[:] .= random_unit_complex .* vec(conj.(reshape(u_v[ir, :, :], N_v, 1, N_k)) .* reshape(u_c[ir, :, :], 1, N_c, N_k))
+        fft!(u_vc_r_transformed)
+        M[:, ir] = u_vc_r_transformed[sub_ind]
+    end
+    F = qr(M, Val(true))
+
+    return F.p, abs.(diag(F.R))
 end
 
 function assemble_ζ(u_i, r_μ_indices)
