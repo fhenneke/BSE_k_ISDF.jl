@@ -18,14 +18,25 @@ using BSE_k_ISDF
 
 # %% set up problem
 
-example_path = "diamond/131313_20/" # "graphene/"
+param_graphene = Dict(
+    :example_path => "graphene",
+    :N_rs => (15, 15, 50),
+    :N_core => 0,
+    :N_v => 4,
+    :N_c => 5,
+    :N_ks => (42, 42, 1),
+    :N_k_samples = 20,
+    :N_iter = 200
+)
 
-N_1d = 20 # TODO: read from file
-N_rs = (N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
+example_path = "graphene"#"diamond/131313_20/" # "graphene/"
+
+# N_1d = 20 # TODO: read from file
+N_rs = (15, 15, 50)#(N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
 N_core = 0
 N_v = 4
-N_c = 10
-N_ks = (13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
+N_c = 5#10 # 5 for graphene
+N_ks = (42, 42, 1)#(13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
 @time prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path);
 
 # %% error for different N_μ
@@ -33,35 +44,23 @@ N_ks = (13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
 N_k_samples = 20 #TODO: maybe set a little higher
 
 # variable parameters
-
-# f = N_μ -> begin
-#     N_1d = 1
-#     while (N_1d + 1)^3 * 2 < N_μ
-#         N_1d += 1
-#     end
-#     ((N_1d, N_1d, N_1d), N_μ - N_1d^3)
-# end
-# N_μs_vec = [f(N_μ) for N_μ in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500]]#, 600, 700, 800, 1000]] # only up to 350 for graphene
-
-# N_μs_vec = [((i, i, i), (j, j, j)) for j in 2:N_1d, i in 2:6 if i < j && j <= 2 * i]
-
-# N_μ_vec = [length(BSE_k_ISDF.find_r_μ(prob, N_μs[1], N_μs[2])) for N_μs in N_μs_vec]
-
 N_μ_vec = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500, 600]
 
 u_v, u_c = prob.u_v, prob.u_c
 
 N_sub = 30
-p_vv, tol_vv = BSE_k_ISDF.find_r_μ_qrcp(u_v, N_sub);
-p_cc, tol_cc = BSE_k_ISDF.find_r_μ_qrcp(u_c, N_sub);
-p_vc, tol_vc = BSE_k_ISDF.find_r_μ_qrcp(u_v, prob.u_c, N_sub^2);
+F_vv = BSE_k_ISDF.qrcp(u_v, N_sub);
+F_cc = BSE_k_ISDF.qrcp(u_c, N_sub);
+F_vc = BSE_k_ISDF.qrcp(u_v, prob.u_c, N_sub^2);
 
+# for plotting
 rc = BSE_k_ISDF.lattice_matrix(prob) * (mod.(BSE_k_ISDF.r_lattice(prob) .+ 0.375, 1.0) .- 0.375)
-r_μ_vv = rc[:, p_vv]
-r_μ_cc = rc[:, p_cc]
-r_μ_vc = rc[:, p_vc]
-
+r_μ_vv = rc[:, F_vv.p];
+r_μ_cc = rc[:, F_cc.p];
+r_μ_vc = rc[:, F_vc.p];
 save(example_path * "/real_space_grid_$(N_sub).jld2", "rc", rc, "r_μ_vv", r_μ_vv, "r_μ_cc", r_μ_cc, "r_μ_vc", r_μ_vc)
+
+# compute errors in isdf
 
 errors_Z_vv = []
 errors_Z_cc = []
@@ -115,14 +114,14 @@ for Z_tol in Z_tol_vec
 
     H = BSE_k_ISDF.setup_H(prob, isdf)
 
-    # for direction in 1:3
-    #     d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
+    for direction in 1:3
+        d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
 
-    #     α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), N_iter) # H + 0.01 * I for graphene
+        α, β, U = BSE_k_ISDF.lanczos(H + I, normalize(d), N_iter) # H + 0.01 * I for graphene
 
-    #     # save results
-    #     save(example_path * "/optical_absorption_lanczos_$(Z_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
-    # end
+        # save results
+        save(example_path * "/optical_absorption_lanczos_$(Z_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
+    end
 
     eigenvalues, eigenvectors = eigs(H, which=:SR, nev = 1, maxiter=1000)
 

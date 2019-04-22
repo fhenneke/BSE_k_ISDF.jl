@@ -122,9 +122,9 @@ function find_r_μ_old(u_i, N_μ, N_sub)
 end
 
 function find_r_μ(u_i, N_μ, N_sub)
-    return find_r_μ_qrcp(u_i, N_μ, N_sub)[1][1:N_μ]
+    return qrcp(u_i, N_μ, N_sub).p[1:N_μ]
 end
-function find_r_μ_qrcp(u_i, N_sub)
+function qrcp(u_i, N_sub)
     N_r, N_i, N_k = size(u_i)
     
     random_phase = rand(MersenneTwister(42), N_i * N_k)
@@ -139,13 +139,13 @@ function find_r_μ_qrcp(u_i, N_sub)
     end
     F = qr(M, Val(true))
 
-    return F.p, abs.(diag(F.R))
+    return F
 end
 
 function find_r_μ(u_v, u_c, N_μ, N_sub)
-    return find_r_μ_qrcp(u_v, u_c, N_sub)[1][1:N_μ]
+    return qrcp(u_v, u_c, N_sub).p[1:N_μ]
 end
-function find_r_μ_qrcp(u_v, u_c, N_sub)
+function qrcp(u_v, u_c, N_sub)
     N_r, N_v, N_k = size(u_v)
     N_r, N_c, N_k = size(u_c)
     
@@ -161,7 +161,7 @@ function find_r_μ_qrcp(u_v, u_c, N_sub)
     end
     F = qr(M, Val(true))
 
-    return F.p, abs.(diag(F.R))
+    return F
 end
 
 function assemble_ζ(u_i, r_μ_indices)
