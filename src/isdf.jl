@@ -72,57 +72,29 @@ function ISDF(prob::AbstractBSEProblem, r_μ_vv_indices::AbstractVector, r_μ_cc
 end
 
 function ISDF(prob::AbstractBSEProblem, N_μ_vv::Int, N_μ_cc::Int, N_μ_vc::Int)
-    r_μ_vv_indices = find_r_μ(prob, N_μ_vv)
-    r_μ_cc_indices = find_r_μ(prob, N_μ_cc)
-    r_μ_vc_indices = find_r_μ(prob, N_μ_vc)
+    N_v, N_c, N_k = size(prob)
+    N_sub_max = 30
+
+    N_sub_vv = min(N_sub_max, N_v * N_k)
+    N_sub_cc = min(N_sub_max, N_c * N_k)
+    N_sub_vc = min(N_sub_max^2, N_v * N_c * N_k)
+
+    r_μ_vv_indices = find_r_μ(prob.u_v, N_μ_vv, N_sub_vv)
+    r_μ_cc_indices = find_r_μ(prob.u_c, N_μ_cc, N_sub_cc)
+    r_μ_vc_indices = find_r_μ(prob.u_v, prob.u_c, N_μ_vc, N_sub_vc)
 
     return ISDF(prob, r_μ_vv_indices, r_μ_cc_indices, r_μ_vc_indices)
 end
 
-# """
-#     find_r_μ(prob, N_μ)
-
-# Return an array of `N_μ` indices corresponding to interpolation
-# points in the unit cell.
-# """
-# function find_r_μ(prob::AbstractBSEProblem, N_μ::Int)
-#     # generic implementation chooses pseudo random points
-#     N_rs = size_r(prob)
-#     N_r = prod(N_rs)
-
-#     r_mask = zeros(Bool, N_rs)
-#     shifts = (sqrt(2), sqrt(3), sqrt(5))
-#     for i in 1:N_μ
-#         r_mask[CartesianIndex(ceil.(Int, mod.(i .* shifts, 1.0) .* N_rs))] = true
-#     end
-#     r_μ_indices = findall(vec(r_mask))
-#     return r_μ_indices
-# end
-
 """
-    find_r_μ(prob, N_μ)
+    find_r_μ(u_i, N_μ, N_sub)
 
 Return an array of indices corresponding to interpolation
 points in the unit cell. The points are computed via the algorithm proposed in
 Lu, Ying; 2016; Fast Allgorithm for periodic Fitting for Bloch Waves
 """
-function find_r_μ_old(u_i, N_μ, N_sub)
-    N_r, N_v, N_k = size(u_i)
-    
-    random_phase = rand(MersenneTwister(42), N_v * N_k)
-    U_i = transpose(cos.(2 .* pi .* random_phase) .+ im * sin.(2 .* pi .* random_phase)) .* reshape(u_i, N_r, N_v * N_k)
-    fft!(U_i, 2)
-    sub_ind = randperm(MersenneTwister(42), N_v * N_k)[1:N_sub]
-    U_i_sub = U_i[:, sub_ind]
-    M = reshape(conj.(reshape(U_i_sub, N_r, :, 1)) .* reshape(U_i_sub, N_r, 1, :), N_r, :)
-    F = qr(transpose(M), Val(true));
-    # r_μ_vv_indices = F.p[1:(findfirst(x -> x < 1e-2, abs.(diag(F.R)) ./ abs(F.R[1, 1])) - 1)]
-    r_μ_i_indices = F.p[1:N_μ]
-    return r_μ_i_indices
-end
-
 function find_r_μ(u_i, N_μ, N_sub)
-    return qrcp(u_i, N_μ, N_sub).p[1:N_μ]
+    return qrcp(u_i, N_sub).p[1:N_μ]
 end
 function qrcp(u_i, N_sub)
     N_r, N_i, N_k = size(u_i)
@@ -152,7 +124,7 @@ function qrcp(u_v, u_c, N_sub)
     random_phase = rand(MersenneTwister(42), N_v * N_c * N_k)
     random_unit_complex = cos.(2 .* pi .* random_phase) .+ im * sin.(2 .* pi .* random_phase)
     u_vc_r_transformed = zeros(Complex{Float64}, N_v * N_c * N_k)
-    sub_ind = randperm(MersenneTwister(42), N_v * N_k)[1:N_sub]
+    sub_ind = randperm(MersenneTwister(42), N_v * N_c * N_k)[1:N_sub]
     M = zeros(Complex{Float64}, N_sub, N_r)
     for ir in 1:N_r
         u_vc_r_transformed[:] .= random_unit_complex .* vec(conj.(reshape(u_v[ir, :, :], N_v, 1, N_k)) .* reshape(u_c[ir, :, :], 1, N_c, N_k))

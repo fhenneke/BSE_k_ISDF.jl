@@ -25,18 +25,18 @@ param_graphene = Dict(
     :N_v => 4,
     :N_c => 5,
     :N_ks => (42, 42, 1),
-    :N_k_samples = 20,
-    :N_iter = 200
+    :N_k_samples => 20,
+    :N_iter => 200
 )
 
-example_path = "graphene"#"diamond/131313_20/" # "graphene/"
+example_path = "diamond/131313_20/" # "graphene/"
 
-# N_1d = 20 # TODO: read from file
-N_rs = (15, 15, 50)#(N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
+N_1d = 20 # TODO: read from file
+N_rs = (N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
 N_core = 0
 N_v = 4
-N_c = 5#10 # 5 for graphene
-N_ks = (42, 42, 1)#(13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
+N_c = 10 # 5 for graphene
+N_ks = (13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
 @time prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path);
 
 # %% error for different N_μ
@@ -51,7 +51,7 @@ u_v, u_c = prob.u_v, prob.u_c
 N_sub = 30
 F_vv = BSE_k_ISDF.qrcp(u_v, N_sub);
 F_cc = BSE_k_ISDF.qrcp(u_c, N_sub);
-F_vc = BSE_k_ISDF.qrcp(u_v, prob.u_c, N_sub^2);
+F_vc = BSE_k_ISDF.qrcp(u_v, u_c, N_sub^2);
 
 # for plotting
 rc = BSE_k_ISDF.lattice_matrix(prob) * (mod.(BSE_k_ISDF.r_lattice(prob) .+ 0.375, 1.0) .- 0.375)
@@ -67,7 +67,7 @@ errors_Z_cc = []
 errors_Z_vc = []
 
 @time for N_μ_vv in N_μ_vec
-    r_μ_vv_indices = p_vv[1:N_μ_vv]
+    r_μ_vv_indices = F_vv.p[1:N_μ_vv]
     ζ_vv = BSE_k_ISDF.assemble_ζ(u_v, r_μ_vv_indices)
     error_Z_vv = BSE_k_ISDF.isdf_error_estimate(u_v, ζ_vv, r_μ_vv_indices, N_k_samples)
     # error_Z_vv = BSE_k_ISDF.isdf_error(u_v, ζ_vv, r_μ_vv_indices)
@@ -75,7 +75,7 @@ errors_Z_vc = []
     push!(errors_Z_vv, error_Z_vv)
 end
 @time for N_μ_cc in N_μ_vec
-    r_μ_cc_indices = p_cc[1:N_μ_cc]
+    r_μ_cc_indices = F_cc.p[1:N_μ_cc]
     ζ_cc = BSE_k_ISDF.assemble_ζ(u_c, r_μ_cc_indices)
     error_Z_cc = BSE_k_ISDF.isdf_error_estimate(u_c, ζ_cc, r_μ_cc_indices, N_k_samples)
     # error_Z_cc = BSE_k_ISDF.isdf_error(u_c, ζ_cc, r_μ_cc_indices)
@@ -83,7 +83,7 @@ end
     push!(errors_Z_cc, error_Z_cc)
 end
 @time for N_μ_vc in N_μ_vec
-    r_μ_vc_indices = p_vc[1:N_μ_vc]
+    r_μ_vc_indices = F_vc.p[1:N_μ_vc]
     ζ_vc = BSE_k_ISDF.assemble_ζ(u_v, u_c, r_μ_vc_indices)
     error_Z_vc = BSE_k_ISDF.isdf_error_estimate(u_v, u_c, ζ_vc, r_μ_vc_indices, N_k_samples)
     # error_Z_vc = BSE_k_ISDF.isdf_error(u_v, u_c, ζ_vc, r_μ_vc_indices)
@@ -102,13 +102,15 @@ N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_
 N_iter = 200
 
 #variable parameters
-Z_tol_vec = [0.5, 0.2, 0.1]
+Z_tol_vec = [0.5, 0.2, 0.1]# [0.01] for graphene
 
 # compute spectra
 for Z_tol in Z_tol_vec
     N_μ_vv = N_μ_vec[findfirst(errors_Z_vv .<= Z_tol)]
     N_μ_cc = N_μ_vec[findfirst(errors_Z_cc .<= Z_tol)]
     N_μ_vc = N_μ_vec[findfirst(errors_Z_vc .<= Z_tol)]
+#     @show N_μ_vv, N_μ_cc, N_μ_vc
+# end
 
     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
 
@@ -117,7 +119,7 @@ for Z_tol in Z_tol_vec
     for direction in 1:3
         d = BSE_k_ISDF.optical_absorption_vector(prob, direction)
 
-        α, β, U = BSE_k_ISDF.lanczos(H + I, normalize(d), N_iter) # H + 0.01 * I for graphene
+        α, β, U = BSE_k_ISDF.lanczos(H, normalize(d), N_iter) # H + 0.01 * I for graphene
 
         # save results
         save(example_path * "/optical_absorption_lanczos_$(Z_tol)_$(direction).jld2", "alpha", α, "beta", β, "norm_d", norm(d))
