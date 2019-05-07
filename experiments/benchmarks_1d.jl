@@ -31,8 +31,8 @@ N_core = 0
 N_v = 4
 N_c = 5
 
-N_μ_cc = 22
-N_μ_vv = 16
+N_μ_vv = 17
+N_μ_cc = 23
 N_μ_vc = 21
 
 # variable parameters
