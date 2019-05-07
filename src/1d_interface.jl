@@ -74,7 +74,7 @@ function solve(prob::SPProblem1D)
     V_sp = prob.V_sp
     l = prob.l
     r = prob.r_unit
-    kc = 2 * pi / l * prob.k_bz
+    kc = 2 * pi / l * (mod.(prob.k_bz .+ 0.5, 1.0) .- 0.5)
 
     ev = []
     ef = []
