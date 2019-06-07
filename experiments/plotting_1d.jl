@@ -29,21 +29,33 @@ r_super, V_grid, W_grid = load("1d_old/example_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jl
 
 plot_indices = findall(-7.5 .<= r_super .<= 7.5)
 
-fig = @pgf Axis(
+fig = @pgf TikzPicture(Axis(
     {fig_theme...,
-    title = "potentials", xlabel = "\$r\$", ylabel = "",
+    xlabel = "\$r\$", ylabel = "",
     xmin = -7.5, xmax = 7.5,
-    legend_pos = "north west"},
+    ymin = 0, ymax = 12,
+    legend_pos = "north west",
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
     PlotInc({"no markers"},
         Table(; x = r_super[plot_indices], y = V_grid[plot_indices])),
+    LegendEntry("\$V\$"),
     PlotInc({"no markers"},
         Table(; x = r_super[plot_indices], y = W_grid[plot_indices])),
-    PlotInc({"no markers"},
+    LegendEntry("\$W\$"),
+    PlotInc({"dashed", "no markers"},
         Table(; x = [0.0, 0.0], y = [0.0, 12.0])),
+    LegendEntry("\$\\Omega\$"),
     "\\pgfplotsset{cycle list shift=-1}",
-    PlotInc({"no markers"},
+    PlotInc({"dashed", "no markers"},
         Table(; x = [1.5, 1.5], y = [0.0, 12.0]))
-)
+))
+
+pgfsave("1d_old/1d_potentials.tex", fig, include_preamble = false)
+pgfsave("1d_old/1d_potentials.pdf", fig, include_preamble = false)
+
+# %% plot band structure
 
 E_v, E_c, k_bz = load("1d_old/example_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "E_v", "E_c", "k_bz")
 # ev, ef = load("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "ev", "ef")
@@ -57,12 +69,16 @@ ef_vck = reshape(abs2.(ef[:, i_gs]), N_v, N_c, N_k)
 marker_v = 10 .* sqrt.([sum(ef_vck, dims=2)[iv, 1, ik] for ik in p, iv in 1:N_v])
 marker_c = 10 .* sqrt.([sum(ef_vck, dims=1)[1, ic, ik] for ik in p, ic in 1:N_c])
 
-fig = @pgf Axis(
+fig = @pgf TikzPicture(Axis(
     {fig_theme...,
-    title = "", xlabel = "\$k\$", ylabel = "\$E\$",
-    ymin = -10, ymax = 100,
+    title = "", xlabel = "\$k\$", ylabel = "\$\\epsilon_k\$",
+    ylabel_shift = "-3mm",
+    xmin = -0.5, xmax = 0.5,
+    ymin = -10, ymax = 110,
     legend_pos = "north west",
-    "width = 0.70\\textwidth",
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true,
     "colormap/Dark2-8"},
     "\\pgfplotsset{cycle list shift=1}",
     PlotInc({mark = "*", "scatter",
@@ -101,35 +117,35 @@ fig = @pgf Axis(
     "\\pgfplotsset{cycle list shift=-7}",
     PlotInc({"no markers"},
         Table(; x = k_1bz[p], y = E_c[5, p]))
-)
+))
 
-pgfsave("1d_old/band_structure.tex", fig, include_preamble = false)
-pgfsave("1d_old/band_structure.pdf", fig, include_preamble = false)
+pgfsave("1d_old/1d_band_structure.tex", fig, include_preamble = false)
+pgfsave("1d_old/1d_band_structure.pdf", fig, include_preamble = false)
+
+#
 
 # %% plot benchmark results
 
 N_k_vec, setup_times, evaluation_times =  load("1d_old/benchmark.jld2", "N_k_vec", "setup_times", "evaluation_times")
 
-# plot(title = "run time scaling", xlabel = L"N_k", ylabel = "time [s]")
-# plot!(N_k_vec, setup_times, m = :circ, labels = "initial setup", xscale = :log2, yscale = :log10)
-# plot!(N_k_vec, evaluation_times, m = :square, labels = "matrix vector product")
-# plot!(N_k_vec, 1e-4 * N_k_vec, ls = :dash, labels = L"O(N_k)")
-# savefig("results_" * example_string * "/timings_k.pdf")
-
 fig = @pgf LogLogAxis(
-        {fig_theme...,
-        title = "Run Time Scaling", xlabel = "\$N_k\$", ylabel = "time [s]",
-        legend_pos = "south east",
-        "width = 0.98\\textwidth"},
-        PlotInc({mark = "*"},
-            Table(; x = N_k_vec, y = setup_times)),
-        LegendEntry("initial setup"),
-        PlotInc({mark = "square*"},
-            Table(; x = N_k_vec, y = evaluation_times)),
-        LegendEntry("matrix vector product"),
-        PlotInc({"dashed"},
-            Table(; x = N_k_vec, y = 1.5 * 1e-4 * N_k_vec)),
-        LegendEntry("\$O(N_k)\$"))
+    {fig_theme...,
+    title = "Run Time Scaling", xlabel = "\$N_k\$", ylabel = "run time [s]",
+    legend_style = "{at={(0.6,0.2)},anchor=west}",
+    ymin = 1e-4,
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
+    PlotInc({mark = "*"},
+        Table(; x = N_k_vec, y = setup_times)),
+    LegendEntry("initial setup"),
+    PlotInc({mark = "square*"},
+        Table(; x = N_k_vec, y = evaluation_times)),
+    LegendEntry("matrix vector product"),
+    PlotInc({"dashed"},
+        Table(; x = N_k_vec, y = 1.5 * 1e-4 * N_k_vec)),
+        LegendEntry("\$O(N_k)\$")
+)
 
 pgfsave("1d_old/1d_timings_k.tex", fig, include_preamble = false)
 pgfsave("1d_old/1d_timings_k.pdf", fig, include_preamble = false)
@@ -169,6 +185,8 @@ plot!(N_μ_vc_vec, errors_M_vc, m = :diamond, label = L"M_{vc}")
 
 savefig("results_" * example_string * "/errors_M.pdf")
 
+#
+
 N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load("1d_old/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 fig = @pgf Axis(
@@ -177,8 +195,9 @@ fig = @pgf Axis(
     legend_entries = {"\$Z^{cc}\$", "\$Z^{vv}\$", "\$Z^{vc}\$"},
     xmin = N_μ_vec[1], xmax = N_μ_vec[end], ymin = 1e-10, ymax = 1e0,
     ymode = "log",
-    # legend_pos = "south east",
-    "width = 0.55\\textwidth"},
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
     PlotInc({"solid", mark = "*"},
         Table(; x = N_μ_vec, y = errors_Z_cc)),
     PlotInc({"dashed", mark = "cube*"},
@@ -237,10 +256,12 @@ fig = @pgf LogLogAxis(
     {fig_theme...,
     title = "Error in Spectrum of \$H\$", xlabel = "\$Z_{tol}\$",
     legend_entries = {"error in first eigenvalue", "error in spectral function"},
-    xmin = Z_tol_vec[end], xmax = Z_tol_vec[1], ymin = 1e-10, ymax = 1e4,
+    xmin = Z_tol_vec[end], xmax = Z_tol_vec[1], ymin = 1e-10, ymax = 5e4,
     # ymode = "log",
     legend_pos = "north west",
-    "width = 0.55\\textwidth"},
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
     PlotInc({"solid", mark = "*"},
         Table(; x = Z_tol_vec, y = errors_optical_absorption)),
     PlotInc({"dashed", mark = "cube*"},

@@ -93,80 +93,26 @@ fig = @pgf Axis(
         LegendEntry("positions of nuclei"))
 
 pgfsave("diamond_interpolation_points.tex", fig, include_preamble = false)
+# %% plotting of error in spectrum of H
 
-# %% plot benchmark results for diamond
-
-N_μ_vv = 20
-N_μ_cc = 220
-N_μ_vc = 100
-
-N_ks_vec, setup_times, evaluation_times =  load("diamond/benchmark_$(N_μ_vv)_$(N_μ_cc)_$(N_μ_vc).jld2", "N_ks_vec", "setup_times", "evaluation_times")
+Z_tol_vec, errors_optical_absorption, errors_ground_state_energy = load("diamond/131313_20/errors_spectrum.jld2", "Z_tol_vec", "errors_optical_absorption", "errors_ground_state_energy")
 
 fig = @pgf LogLogAxis(
     {fig_theme...,
-    title = "run time scaling", xlabel = "\$N_k\$", ylabel = "time [s]",
-    legend_pos = "south east",
-    "width = 0.98\\textwidth"},
-    PlotInc({mark = "*"},
-        Table(; x = prod.(N_ks_vec), y = setup_times)),
-    LegendEntry("initial setup"),
-    PlotInc({mark = "square*"},
-        Table(; x = prod.(N_ks_vec), y = evaluation_times)),
-    LegendEntry("matrix vector product"),
-    PlotInc({"dashed"},
-        Table(; x = prod.(N_ks_vec), y = 1e-2 * prod.(N_ks_vec))),
-    LegendEntry("\$O(N_k)\$")
-)
-
-pgfsave("diamond/diamond_timings_k.tex", fig, include_preamble = false)
-pgfsave("diamond/diamond_timings_k.pdf", fig, include_preamble = false)
-
-# %% plotting of error in M
-example_path = "diamond/131313_20"
-
-N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
-
-# N_μ_vec = [prod(N_μs[1]) + N_μs[2] for N_μs in N_μs_vec]
-
-plot(title = "Error in ISDF", xlabel = L"N_\mu^{ij}", xscale = :log10, yscale = :log10, xlims = (N_μ_vec[1], N_μ_vec[end]), ylims = (1e-5, 2e0))
-plot!(N_μ_vec, errors_Z_cc, m = :circ, label = L"Z^{cc}")
-plot!(N_μ_vec, errors_Z_vv, m = :square, label = L"Z^{vv}")
-plot!(N_μ_vec, errors_Z_vc, m = :diamond, label = L"Z^{vc}")
-
-savefig(example_path * "/errors_M.pdf")
-
-# same lot with PGFPlotsX
-
-N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load("diamond/131313_20/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
-
-fig = @pgf Axis(
-    {fig_theme...,
-    title = "Error in ISDF", xlabel = "\$N_\\mu^{ij}\$",
-    legend_entries = {"\$Z^{cc}\$", "\$Z^{vv}\$", "\$Z^{vc}\$"},
-    xmin = N_μ_vec[1], xmax = N_μ_vec[end], ymin = 1e-4, ymax = 1e0,
-    ymode = "log",
-    # legend_pos = "south east",
-    "width = 0.98\\textwidth"},
+    title = "Error in Spectrum of \$H\$", xlabel = "\$Z_{tol}\$",
+    legend_entries = {"error in first eigenvalue", "error in spectral function"},
+    xmin = Z_tol_vec[end], xmax = Z_tol_vec[1], ymin = 1e-4, ymax = 1e1,
+    # ymode = "log",
+    legend_pos = "north west",
+    "width = 0.55\\textwidth"},
     PlotInc({"solid", mark = "*"},
-        Table(; x = N_μ_vec, y = errors_Z_cc)),
+        Table(; x = Z_tol_vec, y = errors_optical_absorption)),
     PlotInc({"dashed", mark = "cube*"},
-        Table(; x = N_μ_vec, y = errors_Z_vv)),
-    PlotInc({"dotted", mark = "triangle*"},
-        Table(; x = N_μ_vec, y = errors_Z_vc))
+        Table(; x = Z_tol_vec, y = errors_ground_state_energy))
 )
 
-pgfsave("diamond/131313_20/diamond_errors_isdf.tex", fig, include_preamble = false)
-pgfsave("diamond/131313_20/diamond_errors_isdf.pdf", fig, include_preamble = false)
-
-# %% plotting of error in spectrum of H
-example_path = "diamond/131313_20/"
-
-M_tol_vec, errors_optical_absorption, errors_ground_state_energy = load(example_path * "/errors_spectrum.jld2", "M_tol_vec",  "errors_optical_absorption", "errors_ground_state_energy")
-
-plot(title = "Error in " * L"H", xlabel = L"\epsilon_M", xscale = :log10, yscale = :log10, ylims = (1e-11, 1e0))
-plot!(M_tol_vec, errors_H, m = :circ, label = L"H")
-
-savefig("results_" * example_string * "/errors_H.pdf")
+pgfsave("1d_old/1d_errors_spectrum.tex", fig, include_preamble = false)
+pgfsave("1d_old/1d_errors_spectrum.pdf", fig, include_preamble = false)
 
 # %% plot optical absorption spectrum
 
@@ -182,10 +128,11 @@ fig = @pgf Axis(
     {fig_theme...,
     "no markers",
     title = "Optical Absorption of Diamond",
-    xlabel = "E [eV]", ylabel = "",
+    xlabel = "\$\\omega\$ [eV]", ylabel = "\$\\varepsilon_2\$",
     xmin = 0, xmax = 25, ymin = 0, ymax = 38,
-    # legend_pos = "north east",
-    "width = 0.55\\textwidth"},
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
     PlotInc({"dashed", line_width="2.5pt"},
         Table(; x = Ha_to_eV .* Erange, y = absorption_reference[:, 1])),
     LegendEntry("Reference"),
@@ -209,10 +156,11 @@ fig = @pgf Axis(
     {fig_theme...,
     "no markers",
     title = "Optical Absorption of Graphene",
-    xlabel = "E [eV]", ylabel = "",
+    xlabel = "\$\\omega\$ [eV]", ylabel = "\$\\varepsilon_2\$",
     xmin = 1, xmax = 5, ymin = 0, ymax = 15,
-    # legend_pos = "north east",
-    "width = 0.55\\textwidth"},
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
     PlotInc({"dashed", line_width="2.5pt"},
         Table(; x = Ha_to_eV .* Erange, y = clamp.(absorption_reference[:, 1], 0, 20))),
     LegendEntry("Reference"),
@@ -226,37 +174,29 @@ pgfsave("graphene/graphene_optical_absorption_spectrum.pdf", fig, include_preamb
 
 # %% plot optical absorption spectrum for different N_iter
 
-example_path = "diamond/131313_20/"
+# example_path = "diamond/131313_20/"
 
-Ha_to_eV = 27.211396641308
+# Ha_to_eV = 27.211396641308
 
-Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
+# Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
 
-Z_tol = 0.25
-N_iter_vec = [200]
-optical_absorption_lanc = []
-for N_iter in N_iter_vec
-    absorption = load(example_path * "/optical_absorption_$(Z_tol)_$(N_iter).jld2", "absorption")
+# Z_tol = 0.25
+# N_iter_vec = [200]
+# optical_absorption_lanc = []
+# for N_iter in N_iter_vec
+#     absorption = load(example_path * "/optical_absorption_$(Z_tol)_$(N_iter).jld2", "absorption")
 
-    push!(optical_absorption_lanc, absorption)
-end
+#     push!(optical_absorption_lanc, absorption)
+# end
 
-p_optical_absorption_N_k = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35))
-plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
-plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, optical_absorption_lanc, lw = 2, label = "approximate spectrum for " .* L"N_{iter} = " .* string.(transpose(N_iter_vec)))
+# p_optical_absorption_N_k = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35))
+# plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
+# plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, optical_absorption_lanc, lw = 2, label = "approximate spectrum for " .* L"N_{iter} = " .* string.(transpose(N_iter_vec)))
 
-savefig(example_path * "/optical_absorption_spectrum_lanczos.pdf")
+# savefig(example_path * "/optical_absorption_spectrum_lanczos.pdf")
+
 # %% plot optical absorption spctrum for different N_μ
 
-
-
-p_optical_absorption_M_tol = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35))# xlims = (1, 5), ylims = (0, 15)) for graphene
-plot!(p_optical_absorption_M_tol, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
-plot!(p_optical_absorption_M_tol, Ha_to_eV .* Erange, optical_absorption_lanc, lw = 2, label = "approximate spectrum for " .* L"M_{tol} = " .* string.(transpose(M_tol_vec)))
-
-savefig(example_path * "/optical_absorption_spectrum_isdf.pdf")
-
-# same plot with PGFPlotsX
 example_path = "diamond/131313_20/"
 
 Ha_to_eV = 27.211396641308
@@ -275,20 +215,76 @@ end
 fig = @pgf Axis(
     {fig_theme...,
     title = "Optical Absorption of Diamond",
-    xlabel = "E [eV]", ylabel = "",
-    xmin = 0, xmax = 20, ymin = 0, ymax = 38,
+    xlabel = "\$\\omega\$ [eV]", ylabel = "\$\\varepsilon_2\$",
+    xmin = 0, xmax = 25, ymin = 0, ymax = 38,
     legend_pos = "north east",
-    "width = 0.95\\textwidth"},
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
     PlotInc({"dashed", line_width="3pt"},
         Table(; x = Ha_to_eV .* Erange, y = absorption_reference[:, 1])),
-    LegendEntry("Reference Spectrum"),
+    LegendEntry("Reference"),
     PlotInc({},
         Table(; x = Ha_to_eV .* Erange, y = optical_absorption_lanc[1])),
-    LegendEntry("Approximate Spectrum for \$Z_{tol} = 0.5\$"),
+    LegendEntry("\$Z_{tol} = 0.5\$"),
     PlotInc({},
         Table(; x = Ha_to_eV .* Erange, y = optical_absorption_lanc[2])),
-    LegendEntry("Approximate Spectrum for \$Z_{tol} = 0.1\$")
+    LegendEntry("\$Z_{tol} = 0.1\$")
 )
 
 pgfsave("diamond/131313_20/diamond_optical_absorption_spectrum_isdf.tex", fig, include_preamble = false)
 pgfsave("diamond/131313_20/diamond_optical_absorption_spectrum_isdf.pdf", fig, include_preamble = false)
+
+# %% plotting of error in Z
+
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load("diamond/131313_20/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
+
+fig = @pgf Axis(
+    {fig_theme...,
+    title = "Error in ISDF", xlabel = "\$N_\\mu^{ij}\$",
+    legend_entries = {"\$Z^{cc}\$", "\$Z^{vv}\$", "\$Z^{vc}\$"},
+    xmin = N_μ_vec[1], xmax = N_μ_vec[end], ymin = 1e-4, ymax = 1e0,
+    ymode = "log",
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
+    PlotInc({"solid", mark = "*"},
+        Table(; x = N_μ_vec, y = errors_Z_cc)),
+    PlotInc({"dashed", mark = "cube*"},
+        Table(; x = N_μ_vec, y = errors_Z_vv)),
+    PlotInc({"dotted", mark = "triangle*"},
+        Table(; x = N_μ_vec, y = errors_Z_vc))
+)
+
+pgfsave("diamond/131313_20/diamond_errors_isdf.tex", fig, include_preamble = false)
+pgfsave("diamond/131313_20/diamond_errors_isdf.pdf", fig, include_preamble = false)
+
+# %% plot benchmark results for diamond
+
+N_μ_vv = 70
+N_μ_cc = 220
+N_μ_vc = 100
+
+N_ks_vec, setup_times, evaluation_times =  load("diamond/benchmark_$(N_μ_vv)_$(N_μ_cc)_$(N_μ_vc).jld2", "N_ks_vec", "setup_times", "evaluation_times")
+
+fig = @pgf LogLogAxis(
+    {fig_theme...,
+    title = "Run Time Scaling", xlabel = "\$N_k\$", ylabel = "run time [s]",
+    legend_pos = "south east",
+    legend_style = "{at={(0.6,0.2)},anchor=west}",
+    "width = 0.4\\textwidth",
+    "height = 0.3\\textwidth",
+    scale_only_axis = true},
+    PlotInc({mark = "*"},
+        Table(; x = prod.(N_ks_vec), y = setup_times)),
+    LegendEntry("initial setup"),
+    PlotInc({mark = "square*"},
+        Table(; x = prod.(N_ks_vec), y = evaluation_times)),
+    LegendEntry("matrix vector product"),
+    PlotInc({"dashed"},
+        Table(; x = prod.(N_ks_vec), y = 2e-2 * prod.(N_ks_vec))),
+    LegendEntry("\$O(N_k)\$")
+)
+
+pgfsave("diamond/diamond_timings_k.tex", fig, include_preamble = false)
+pgfsave("diamond/diamond_timings_k.pdf", fig, include_preamble = false)
