@@ -1,0 +1,88 @@
+<input>
+
+   <title>Graphene</title>
+
+   <structure speciespath="./">
+
+      <crystal scale="4.6505">
+         <basevect>  0.5  0.8660254040  0.0 </basevect>
+         <basevect> -0.5  0.8660254040  0.0 </basevect>
+         <basevect>  0.0  0.0000000000  6.0 </basevect>
+      </crystal>
+      <species speciesfile="C.xml" rmt="1.20">
+         <atom coord="0.00000000  0.00000000  0.0"/>
+         <atom coord="0.33333333  0.33333333  0.0"/>
+      </species>
+
+   </structure>
+
+   <groundstate
+      do="skip"
+      xctype="GGA_PBE"
+      ngridk="42 42 1"
+      rgkmax="8"
+      gmaxvr="14"
+      swidth="0.0001"
+      epsengy="1.0d-7">
+   </groundstate>
+
+   <xs
+      xstype="BSE"
+      ngridk="42 42 1"
+      ngridq="42 42 1"
+      swidth="0.00001"
+      rgkmax="6.0"
+      lmaxapw="12"
+      vkloff="0.01 0.02 0.015"
+      reduceq="false"
+      nempty="80"
+      gqmax="2.0"
+      broad="0.0036"
+      scissor="0.01"
+      tappinfo="true"
+      tevout="true" >
+
+      <energywindow
+            intv="0.0 1.0"
+            points="1000" />
+
+      <screening
+            screentype="full"
+            nempty="100" />
+
+      <BSE
+            bsetype="triplet"
+            nstlbse="1 4 1 5"
+            writepotential="true" />
+
+      <qpointset>
+         <qpoint>0.0 0.0 0.0</qpoint>
+      </qpointset>
+
+      <plan>
+	 <doonly task="xsgeneigvec"/>
+         <doonly task="scr_wfplot_hdf"/>
+         <doonly task="writepmatxs"/>
+         <doonly task="writepmatasc"/>
+	 <doonly task="scrgeneigvec"/>
+         <doonly task="scrwritepmat"/>
+	 <doonly task="screen"/>
+	 <doonly task="write_screen_hdf5"/>
+	 <!--<doonly task="exccoulint"/>
+         <doonly task="scrcoulint"/>
+	 <doonly task="bse"/>-->
+      </plan>
+
+      <scrwfplot kptrange="1 1764" bandrange="1 9">
+         <plot3d>
+            <box grid="15 15 50">
+               <origin coord="  0.0   0.0   0.0"/>
+               <point  coord="  1.0   0.0   0.0"/>
+               <point  coord="  0.0   1.0   0.0"/>
+               <point  coord="  0.0   0.0   1.0"/>
+            </box>
+         </plot3d>
+      </scrwfplot>
+   </xs>
+
+</input>
