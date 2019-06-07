@@ -244,30 +244,3 @@ function isdf_error_estimate(u_v, u_c, ζ, r_μ_indices, N_k_samples)
 
     return sqrt(error2 / normalization2)
 end
-
-function assemble_M(prob::AbstractBSEProblem)
-    M_vv = assemble_M(prob.u_v)
-    M_cc = assemble_M(prob.u_c)
-    M_vc = assemble_M(prob.u_v, prob.u_c)
-    return M_vv, M_cc, M_vc
-end
-
-function assemble_M(u_i::Array)
-    N_unit, N_i, N_k = size(u_i)
-    M_reshaped = [u_i[ir, jj, jk] * conj(u_i[ir, ii, ik]) for ir in 1:N_unit, ii in 1:N_i, ik in 1:N_k, jj in 1:N_i, jk in 1:N_k]
-    M = reshape(M_reshaped, N_unit, (N_i * N_k)^2)
-end
-
-function assemble_M(u_v::Array, u_c::Array)
-    N_unit, N_c, N_k = size(u_c)
-    N_unit, N_v, N_k = size(u_v)
-    M_reshaped = [u_c[ir, ic, ik] * conj(u_v[ir, iv, ik]) for ir in 1:N_unit, iv in 1:N_v, ic in 1:N_c, ik in 1:N_k]
-    M = reshape(M_reshaped, N_unit, N_v * N_c * N_k)
-end
-
-function assemble_M(isdf::ISDF)
-    M_vv = isdf.ζ_vv * assemble_M(isdf.u_v_vv)
-    M_cc = isdf.ζ_cc * assemble_M(isdf.u_c_cc)
-    M_vc = isdf.ζ_vc * assemble_M(isdf.u_v_vc, isdf.u_c_vc)
-    return M_vv, M_cc, M_vc
-end
