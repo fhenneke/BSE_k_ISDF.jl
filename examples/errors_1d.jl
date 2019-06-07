@@ -32,7 +32,7 @@ u_v, u_c = prob.u_v, prob.u_c
 
 V_grid = V_func.(prob.prob.r_super, 0)
 W_grid = W_func.(prob.prob.r_super, 0, l, N_k * l)
-save("1d_old/example_$(N_r)_$(N_v)_$(N_c)_$(N_k).jld2", "r_super", prob.prob.r_super, "V_grid", V_grid, "W_grid", W_grid, "E_v", prob.E_v, "E_c", prob.E_c, "k_bz", prob.prob.k_bz)
+save("1d/example_$(N_r)_$(N_v)_$(N_c)_$(N_k).jld2", "r_super", prob.prob.r_super, "V_grid", V_grid, "W_grid", W_grid, "E_v", prob.E_v, "E_c", prob.E_c, "k_bz", prob.prob.k_bz)
 
 # variable parameters
 N_μ_vec = 1:40
@@ -47,7 +47,7 @@ rc = BSE_k_ISDF.lattice_matrix(prob) * BSE_k_ISDF.r_lattice(prob)
 r_μ_vv = rc[:, F_vv.p];
 r_μ_cc = rc[:, F_cc.p];
 r_μ_vc = rc[:, F_vc.p];
-save("1d_old/real_space_grid_$(N_sub).jld2", "rc", rc, "r_μ_vv", r_μ_vv, "r_μ_cc", r_μ_cc, "r_μ_vc", r_μ_vc)
+save("1d/real_space_grid_$(N_sub).jld2", "rc", rc, "r_μ_vv", r_μ_vv, "r_μ_cc", r_μ_cc, "r_μ_vc", r_μ_vc)
 
 
 errors_Z_vv = []
@@ -79,7 +79,7 @@ end
     push!(errors_Z_vc, error_Z_vc)
 end
 
-save("1d_old/errors_Z.jld2", "N_μ_vec", N_μ_vec, "errors_Z_vv", errors_Z_vv, "errors_Z_cc", errors_Z_cc, "errors_Z_vc", errors_Z_vc)
+save("1d/errors_Z.jld2", "N_μ_vec", N_μ_vec, "errors_Z_vv", errors_Z_vv, "errors_Z_cc", errors_Z_cc, "errors_Z_vc", errors_Z_vc)
 
 # %% set up reference Hamiltonian
 
@@ -111,7 +111,7 @@ H_exact = D + 2 * V_exact - W_exact
 
 @time F = eigen(H_exact)
 
-save("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", H_exact, "ev", F.values, "ef", F.vectors)
+save("1d/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", H_exact, "ev", F.values, "ef", F.vectors)
 
 # %% copute error in H for different errors in M (it might not be necessary to compute this)
 
@@ -122,9 +122,9 @@ N_v = 4
 N_c = 5
 N_k = 256
 
-H_exact = load("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact")
+H_exact = load("1d/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact")
 
-N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc = load("1d_old/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc = load("1d/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 N_μ_vv_vec = []
 N_μ_cc_vec = []
@@ -151,7 +151,7 @@ for Z_tol in Z_tol_vec
     push!(errors_H, error_H)
 end
 
-save("1d_old/errors_H_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "Z_tol_vec", Z_tol_vec, "N_μ_vv_vec", N_μ_vv_vec, "N_μ_cc_vec", N_μ_cc_vec, "N_μ_vc_vec", N_μ_vc_vec, "errors_H", errors_H)
+save("1d/errors_H_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "Z_tol_vec", Z_tol_vec, "N_μ_vv_vec", N_μ_vv_vec, "N_μ_cc_vec", N_μ_cc_vec, "N_μ_vc_vec", N_μ_vc_vec, "errors_H", errors_H)
 
 # %% compute reference absorption spectrum
 
@@ -176,15 +176,15 @@ N_iter = 200
 sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
 prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V_func, W_func)
 
-H_exact, ev, ef = load("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", "ev", "ef")
+H_exact, ev, ef = load("1d/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "H_exact", "ev", "ef")
 
 d = BSE_k_ISDF.optical_absorption_vector(prob, 1)
 weights = [abs2(ef[:, n]' * d) for n in 1:size(H_exact, 1)]
 optical_absorption = BSE_k_ISDF.lanczos_optical_absorption(real.(ev), weights, ω -> g(ω, σ), Erange, 8 * π^2 / (l * N_k))
 optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(H_exact, normalize(d), N_iter, ω -> g(ω, σ), Erange, norm(d)^2 * 8 * π^2 / (l * N_k))
 
-save("1d_old/optical_absorption_ref_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "Erange", Erange, "optical_absorption", optical_absorption)
-save("1d_old/optical_absorption_lanc_ref_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+save("1d/optical_absorption_ref_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "Erange", Erange, "optical_absorption", optical_absorption)
+save("1d/optical_absorption_lanc_ref_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
 
 # %% compute absorption spectra for different k
 
@@ -223,9 +223,9 @@ for N_k in N_k_vec
     ev, ef = eigs(H, which=:SR, nev = 1, maxiter=1000)
 
     # save results
-    save("1d_old/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+    save("1d/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
 
-    save("1d_old/eigs_$(N_unit)_$(N_k).jld2", "ev", ev, "ef", ef)
+    save("1d/eigs_$(N_unit)_$(N_k).jld2", "ev", ev, "ef", ef)
 end
 
 # %% compute absorption spectra for different N_μ
@@ -241,7 +241,7 @@ N_k = 256
 sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
 prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V_func, W_func)
 
-N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc = load("1d_old/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc = load("1d/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 # broadening
 σ = 0.1
@@ -270,8 +270,8 @@ for Z_tol in Z_tol_vec
     ev, ef = eigs(H, which=:SR, nev = 1, maxiter=1000)
 
     # save results
-    save("1d_old/optical_absorption_lanczos_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter)_$(Z_tol).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
-    save("1d_old/eigs_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(Z_tol).jld2", "ev", ev, "ef", ef)
+    save("1d/optical_absorption_lanczos_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter)_$(Z_tol).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+    save("1d/eigs_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(Z_tol).jld2", "ev", ev, "ef", ef)
 end
 
 ## compute errors
@@ -283,11 +283,11 @@ N_k = 256
 N_iter = 200
 
 Z_tol_vec = [0.8, 0.4, 0.2, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6]
-evs = [load("1d_old/eigs_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(Z_tol).jld2", "ev")[1] for Z_tol in Z_tol_vec]
-optical_absorption_lanc = [load("1d_old/optical_absorption_lanczos_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter)_$(Z_tol).jld2", "optical_absorption_lanc") for Z_tol in Z_tol_vec]
+evs = [load("1d/eigs_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(Z_tol).jld2", "ev")[1] for Z_tol in Z_tol_vec]
+optical_absorption_lanc = [load("1d/optical_absorption_lanczos_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter)_$(Z_tol).jld2", "optical_absorption_lanc") for Z_tol in Z_tol_vec]
 
-ev_ref = minimum(real.(load("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "ev")))
-Erange, optical_absorption_ref = load("1d_old/optical_absorption_lanc_ref_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter).jld2", "Erange", "optical_absorption_lanc")
+ev_ref = minimum(real.(load("1d/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "ev")))
+Erange, optical_absorption_ref = load("1d/optical_absorption_lanc_ref_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(N_iter).jld2", "Erange", "optical_absorption_lanc")
 
 errors_optical_absorption = []
 errors_ground_state_energy = []
@@ -296,4 +296,4 @@ for i in 1:length(Z_tol_vec)
     push!(errors_ground_state_energy, abs(evs[i] - ev_ref))
 end
 
-save("1d_old/errors_spectrum.jld2", "Z_tol_vec", Z_tol_vec,  "errors_optical_absorption", errors_optical_absorption, "errors_ground_state_energy", errors_ground_state_energy)
+save("1d/errors_spectrum.jld2", "Z_tol_vec", Z_tol_vec,  "errors_optical_absorption", errors_optical_absorption, "errors_ground_state_energy", errors_ground_state_energy)

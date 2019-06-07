@@ -14,27 +14,6 @@ fig_theme = @pgf {
     line_width = "1.5pt",
     grid = "major"}
 
-# %% plotting of error in spectrum of H
-
-Z_tol_vec, errors_optical_absorption, errors_ground_state_energy = load("diamond/131313_20/errors_spectrum.jld2", "Z_tol_vec", "errors_optical_absorption", "errors_ground_state_energy")
-
-fig = @pgf LogLogAxis(
-    {fig_theme...,
-    title = "Error in Spectrum of \$H\$", xlabel = "\$Z_{tol}\$",
-    legend_entries = {"error in first eigenvalue", "error in spectral function"},
-    xmin = Z_tol_vec[end], xmax = Z_tol_vec[1], ymin = 1e-4, ymax = 1e1,
-    # ymode = "log",
-    legend_pos = "north west",
-    "width = 0.55\\textwidth"},
-    PlotInc({"solid", mark = "*"},
-        Table(; x = Z_tol_vec, y = errors_optical_absorption)),
-    PlotInc({"dashed", mark = "cube*"},
-        Table(; x = Z_tol_vec, y = errors_ground_state_energy))
-)
-
-pgfsave("1d_old/1d_errors_spectrum.tex", fig, include_preamble = false)
-pgfsave("1d_old/1d_errors_spectrum.pdf", fig, include_preamble = false)
-
 # %% plot optical absorption spectrum
 
 #diamond

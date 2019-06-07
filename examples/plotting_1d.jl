@@ -20,7 +20,7 @@ N_v = 4
 N_c = 5
 N_k = 256
 
-r_super, V_grid, W_grid = load("1d_old/example_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "r_super", "V_grid", "W_grid")
+r_super, V_grid, W_grid = load("1d/example_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "r_super", "V_grid", "W_grid")
 
 plot_indices = findall(-7.5 .<= r_super .<= 7.5)
 
@@ -47,14 +47,14 @@ fig = @pgf TikzPicture(Axis(
         Table(; x = [1.5, 1.5], y = [0.0, 12.0]))
 ))
 
-pgfsave("1d_old/1d_potentials.tex", fig, include_preamble = false)
-pgfsave("1d_old/1d_potentials.pdf", fig, include_preamble = false)
+pgfsave("1d/1d_potentials.tex", fig, include_preamble = false)
+pgfsave("1d/1d_potentials.pdf", fig, include_preamble = false)
 
 # %% plot band structure
 
-E_v, E_c, k_bz = load("1d_old/example_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "E_v", "E_c", "k_bz")
-# ev, ef = load("1d_old/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "ev", "ef")
-ev, ef = load("1d_old/eigs_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(1e-5).jld2", "ev", "ef")
+E_v, E_c, k_bz = load("1d/example_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "E_v", "E_c", "k_bz")
+# ev, ef = load("1d/H_exact_$(N_unit)_$(N_v)_$(N_c)_$(N_k).jld2", "ev", "ef")
+ev, ef = load("1d/eigs_$(N_unit)_$(N_v)_$(N_c)_$(N_k)_$(1e-5).jld2", "ev", "ef")
 
 k_1bz = mod.(k_bz .+ 0.5, 1.0) .- 0.5
 p = sortperm(k_1bz)
@@ -114,12 +114,12 @@ fig = @pgf TikzPicture(Axis(
         Table(; x = k_1bz[p], y = E_c[5, p]))
 ))
 
-pgfsave("1d_old/1d_band_structure.tex", fig, include_preamble = false)
-pgfsave("1d_old/1d_band_structure.pdf", fig, include_preamble = false)
+pgfsave("1d/1d_band_structure.tex", fig, include_preamble = false)
+pgfsave("1d/1d_band_structure.pdf", fig, include_preamble = false)
 
 # %% plot error
 
-N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load("1d_old/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
+N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load("1d/errors_Z.jld2", "N_μ_vec", "errors_Z_vv", "errors_Z_cc", "errors_Z_vc")
 
 fig = @pgf Axis(
     {fig_theme...,
@@ -138,12 +138,12 @@ fig = @pgf Axis(
         Table(; x = N_μ_vec, y = errors_Z_vc))
 )
 
-pgfsave("1d_old/1d_errors_isdf.tex", fig, include_preamble = false)
-pgfsave("1d_old/1d_errors_isdf.pdf", fig, include_preamble = false)
+pgfsave("1d/1d_errors_isdf.tex", fig, include_preamble = false)
+pgfsave("1d/1d_errors_isdf.pdf", fig, include_preamble = false)
 
 # %% error in the first eigenvalue and spectral function for different N_μ
 
-Z_tol_vec, errors_optical_absorption, errors_ground_state_energy = load("1d_old/errors_spectrum.jld2", "Z_tol_vec", "errors_optical_absorption", "errors_ground_state_energy")
+Z_tol_vec, errors_optical_absorption, errors_ground_state_energy = load("1d/errors_spectrum.jld2", "Z_tol_vec", "errors_optical_absorption", "errors_ground_state_energy")
 
 fig = @pgf LogLogAxis(
     {fig_theme...,
@@ -161,12 +161,12 @@ fig = @pgf LogLogAxis(
         Table(; x = Z_tol_vec, y = errors_ground_state_energy))
 )
 
-pgfsave("1d_old/1d_errors_spectrum.tex", fig, include_preamble = false)
-pgfsave("1d_old/1d_errors_spectrum.pdf", fig, include_preamble = false)
+pgfsave("1d/1d_errors_spectrum.tex", fig, include_preamble = false)
+pgfsave("1d/1d_errors_spectrum.pdf", fig, include_preamble = false)
 
 # %% plot benchmark results
 
-N_k_vec, setup_times, evaluation_times =  load("1d_old/benchmark.jld2", "N_k_vec", "setup_times", "evaluation_times")
+N_k_vec, setup_times, evaluation_times =  load("1d/benchmark.jld2", "N_k_vec", "setup_times", "evaluation_times")
 
 fig = @pgf LogLogAxis(
     {fig_theme...,
@@ -187,5 +187,5 @@ fig = @pgf LogLogAxis(
         LegendEntry("\$O(N_k)\$")
 )
 
-pgfsave("1d_old/1d_timings_k.tex", fig, include_preamble = false)
-pgfsave("1d_old/1d_timings_k.pdf", fig, include_preamble = false)
+pgfsave("1d/1d_timings_k.tex", fig, include_preamble = false)
+pgfsave("1d/1d_timings_k.pdf", fig, include_preamble = false)

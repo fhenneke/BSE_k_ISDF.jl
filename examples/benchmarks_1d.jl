@@ -47,15 +47,15 @@ for N_k in N_k_vec
     H * x
     t_H_x = @benchmark $H * $x
 
-    save("1d_old/benchmark_$(N_k).jld2", "t_isdf", t_isdf, "t_H_setup", t_H_setup, "t_H_x", t_H_x)
+    save("1d/benchmark_$(N_k).jld2", "t_isdf", t_isdf, "t_H_setup", t_H_setup, "t_H_x", t_H_x)
 end
 
 # %% save results
 
-results = [load("1d_old/benchmark_$(N_k).jld2") for N_k in N_k_vec]
+results = [load("1d/benchmark_$(N_k).jld2") for N_k in N_k_vec]
 timings = ["t_isdf", "t_H_setup", "t_H_x"]
 
 setup_times = sum(1e-9 .* time.(minimum.([res[t] for res in results, t in timings[1:2]])); dims = 2)
 evaluation_times = 1e-9 .* time.(minimum.([res[t] for res in results, t in timings[3:3]]))
 
-save("1d_old/benchmark.jld2", "N_k_vec", N_k_vec, "setup_times", setup_times, "evaluation_times", evaluation_times)
+save("1d/benchmark.jld2", "N_k_vec", N_k_vec, "setup_times", setup_times, "evaluation_times", evaluation_times)
