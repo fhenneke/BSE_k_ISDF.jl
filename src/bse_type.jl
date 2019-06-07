@@ -80,7 +80,7 @@ Return a representation of the screening in the form of a three-tuple `w_hat, q_
 -   `q_2bz_ind` is a vector of integers of length `N_q` such that `q_2bz_ind[iq]` is the index of the restricted q-point corresponding to the q-point at `iq`.
 -   `q_2bz_shift` is a matrix whos columns correspond to the shift of q-points to restricted q-points.
 """
-function lattice_matrix(prob::AbstractBSEProblem)
+function compute_w_hat(prob::AbstractBSEProblem)
     error("not implemented yet")
 end
 
