@@ -3,7 +3,8 @@
 import JLD2
 import FileIO: load
 import BenchmarkTools
-using PGFPlotsX, Plots, LaTeXStrings, LinearAlgebra, Statistics, DelimitedFiles
+using PGFPlotsX, LinearAlgebra, Statistics, DelimitedFiles
+using BSE_k_ISDF
 
 push!(PGFPlotsX.CUSTOM_PREAMBLE, "\\usepgfplotslibrary{colorbrewer}")
 
@@ -13,86 +14,6 @@ fig_theme = @pgf {
     line_width = "1.5pt",
     grid = "major"}
 
-pyplot()
-
-cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
-push!(LOAD_PATH, "/home/felix/Work/Research/Code")
-using BSE_k_ISDF
-
-# %% wave functions of exicon coefficients in 3D
-
-using Makie
-
-cm = RGBA.(RGB.(to_colormap(:viridis, 256)), range(0.0, stop = 1.0, length = 256))
-
-psi =
-
-colorclamp = min(maximum(abs.(psi)), maximum(abs.(psi_reduced)))
-psi_abs = vec(abs.(psi))
-markersize = psi_abs
-c = clamp.(psi_abs, 0, colorclamp)
-psi_abs_reduced = vec(abs.(psi_reduced))
-markersize_reduced = psi_abs_reduced
-c_reduced = clamp.(psi_abs_reduced, 0, colorclamp)
-
-p1 = Makie.scatter(prob.r_cartesian[1, :], prob.r_cartesian[2, :], prob.r_cartesian[3, :],
-    color = c, markersize = markersize, colormap = cm)
-p2 = Makie.scatter(prob.r_cartesian[1, :], prob.r_cartesian[2, :], prob.r_cartesian[3, :],
-    color = c_reduced, markersize = markersize_reduced, colormap = cm)
-
-scene = AbstractPlotting.vbox(p1, p2)
-
-# %% plot interpolation points
-
-# for diamond
-r_μ_vv = load("diamond/131313_20/real_space_grid_30.jld2", "r_μ_vv")
-N_μ_vv = 50
-
-r_μ_cc = load("diamond/131313_20/real_space_grid_30.jld2", "r_μ_cc")
-N_μ_cc = 50
-
-fig = @pgf Axis(
-        {fig_theme...,
-        title = "interpolation points", xlabel = "\$x\$ in [au]", ylabel = "\$y\$ in [au]", zlabel = "\$z\$ in [au]",
-        legend_pos = "north west",
-        "width = 0.70\\textwidth"},
-        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt", opacity = 0.5},
-            Table(; x = r_μ_vv[1, 1:N_μ_vv], y = r_μ_vv[2, 1:N_μ_vv], z = r_μ_vv[3, 1:N_μ_vv])),
-        LegendEntry("valence"),
-        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt", opacity = 0.5},
-            Table(; x = r_μ_cc[1, 1:N_μ_cc], y = r_μ_cc[2, 1:N_μ_cc], z = r_μ_cc[3, 1:N_μ_cc])),
-        LegendEntry("conduction"),
-        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt"},
-            Table(; x = [0.0, 1.68658], y = [0.0, 1.68658], z = [0.0, 1.68658])),
-        LegendEntry("positions of nuclei"))
-
-pgfsave("diamond_interpolation_points.tex", fig, include_preamble = false)
-
-# for graphene
-r_μ_vv = load("graphene/real_space_grid_30.jld2", "r_μ_vv")
-N_μ_vv = 50
-
-r_μ_cc = load("graphene/real_space_grid_30.jld2", "r_μ_cc")
-N_μ_cc = 50
-
-fig = @pgf Axis(
-        {fig_theme...,
-        title = "graphene", xlabel = "\$x\$ in [au]", ylabel = "\$y\$ in [au]", zlabel = "\$z\$ in [au]",
-        legend_pos = "north west",
-        view = "{25}{10}",
-        zmin = -6, zmax = 6,
-        "width = 0.70\\textwidth"},
-        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt", opacity = 0.5},
-            Table(; x = r_μ_vv[1, 1:N_μ_vv], y = r_μ_vv[2, 1:N_μ_vv], z = r_μ_vv[3, 1:N_μ_vv])),
-        LegendEntry("valence"),
-        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt", opacity = 0.5},
-            Table(; x = r_μ_cc[1, 1:N_μ_cc], y = r_μ_cc[2, 1:N_μ_cc], z = r_μ_cc[3, 1:N_μ_cc])),
-        LegendEntry("conduction"),
-        Plot3Inc({mark = "*", "ball color=yellow!80!black", "only marks", "mark size = 4pt"},
-            Table(; x = [0.0, 0.0], y = [0.0, 2.6849674], z = [0.0, 0.0])),
-        LegendEntry("positions of nuclei"))
-
-pgfsave("diamond_interpolation_points.tex", fig, include_preamble = false)
 # %% plotting of error in spectrum of H
 
 Z_tol_vec, errors_optical_absorption, errors_ground_state_energy = load("diamond/131313_20/errors_spectrum.jld2", "Z_tol_vec", "errors_optical_absorption", "errors_ground_state_energy")
@@ -171,29 +92,6 @@ fig = @pgf Axis(
 
 pgfsave("graphene/graphene_optical_absorption_spectrum.tex", fig, include_preamble = false)
 pgfsave("graphene/graphene_optical_absorption_spectrum.pdf", fig, include_preamble = false)
-
-# %% plot optical absorption spectrum for different N_iter
-
-# example_path = "diamond/131313_20/"
-
-# Ha_to_eV = 27.211396641308
-
-# Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
-
-# Z_tol = 0.25
-# N_iter_vec = [200]
-# optical_absorption_lanc = []
-# for N_iter in N_iter_vec
-#     absorption = load(example_path * "/optical_absorption_$(Z_tol)_$(N_iter).jld2", "absorption")
-
-#     push!(optical_absorption_lanc, absorption)
-# end
-
-# p_optical_absorption_N_k = plot(title = "optical absorption spectrum", xlabel = "E [eV]", xlims = (0, 20), ylims = (0, 35))
-# plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, absorption_reference[:, 1], lw = 4, ls = :dash, label = "reference spectrum")
-# plot!(p_optical_absorption_N_k, Ha_to_eV .* Erange, optical_absorption_lanc, lw = 2, label = "approximate spectrum for " .* L"N_{iter} = " .* string.(transpose(N_iter_vec)))
-
-# savefig(example_path * "/optical_absorption_spectrum_lanczos.pdf")
 
 # %% plot optical absorption spctrum for different N_μ
 

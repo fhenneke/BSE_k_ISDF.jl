@@ -3,15 +3,10 @@
 # %%
 # loading packages
 using BenchmarkTools, JLD2, FileIO, LinearAlgebra, FFTW
+using BSE_k_ISDF
 
 BLAS.set_num_threads(1)
 FFTW.set_num_threads(1)
-
-push!(LOAD_PATH, "/home/felix/Work/Research/Code")
-cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
-
-using Revise #remove after debugging
-using BSE_k_ISDF
 
 # %% benchmark different values of N_k
 

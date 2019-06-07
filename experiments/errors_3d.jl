@@ -3,45 +3,24 @@
 # %%
 # loading packages
 using BenchmarkTools, JLD2, FileIO, DelimitedFiles, LinearAlgebra, FFTW, Statistics, Arpack, HDF5
-# using Plots, LaTeXStrings
-# pyplot()
-# theme(:dark)
+using BSE_k_ISDF
 
 BLAS.set_num_threads(1)
 FFTW.set_num_threads(1)
 
-push!(LOAD_PATH, "/home/felix/Work/Research/Code")
-cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
-
-using Revise #remove after debugging
-using BSE_k_ISDF
-
 # %% set up problem
-
-param_graphene = Dict(
-    :example_path => "graphene",
-    :N_rs => (15, 15, 50),
-    :N_core => 0,
-    :N_v => 4,
-    :N_c => 5,
-    :N_ks => (42, 42, 1),
-    :N_k_samples => 20,
-    :N_iter => 200
-)
-
 example_path = "diamond/131313_20/" # "graphene/"
 
-N_1d = 20 # TODO: read from file
+N_1d = 20
 N_rs = (N_1d, N_1d, N_1d) # (15, 15, 50) for graphene
 N_core = 0
 N_v = 4
 N_c = 10 # 5 for graphene
-N_ks = (13, 13, 13) # (42, 42, 1) for graphene # TODO: read from file
+N_ks = (13, 13, 13) # (42, 42, 1) for graphene
 @time prob = BSE_k_ISDF.BSEProblemExciting(N_core, N_v, N_c, N_ks, N_rs, example_path);
 
 # %% error for different N_μ
-
-N_k_samples = 20 #TODO: maybe set a little higher
+N_k_samples = 20
 
 # variable parameters
 N_μ_vec = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 180, 220, 260, 300, 350, 400, 450, 500, 600]

@@ -3,18 +3,10 @@
 # %%
 # loading packages
 using BenchmarkTools, JLD2, FileIO, LinearAlgebra, FFTW, Statistics, Arpack
-# using Plots, LaTeXStrings
-# pyplot()
-# theme(:dark)
+using BSE_k_ISDF
 
 BLAS.set_num_threads(1)
 FFTW.set_num_threads(1)
-
-push!(LOAD_PATH, "/home/felix/Work/Research/Code")
-cd("/home/felix/Work/Research/Code/BSE_k_ISDF/experiments")
-
-using Revise #remove after debugging
-using BSE_k_ISDF
 
 # general problem setup
 l = 1.5
