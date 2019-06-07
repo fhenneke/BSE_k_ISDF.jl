@@ -4,7 +4,7 @@ using BSE_k_ISDF
 # %% bse problem type
 example_path = "diamond_333_20_test/"
 
-N_1d = 20 # TODO: read from file
+N_1d = 20
 N_rs = (N_1d, N_1d, N_1d)
 N_r = prod(N_rs)
 N_core = 0

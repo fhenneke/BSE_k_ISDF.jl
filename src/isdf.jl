@@ -1,5 +1,5 @@
 # ISDF
-import Random: randperm#, MersenneTwister # TODO: sort out imports
+import Random: randperm
 
 """
     ISDF type
@@ -9,10 +9,10 @@ The arrays `ζ_ij` and `u_ij` are chosen such that approximately
 `u_i u_j ≈ ζ_ij * u_i_ij u_j_ij`.
 """
 struct ISDF
-    N_μ_vv #TODO: remove this information?
+    N_μ_vv
     N_μ_cc
     N_μ_vc
-    r_μ_vv_indices #TODO: remove this information?
+    r_μ_vv_indices
     r_μ_cc_indices
     r_μ_vc_indices
     u_v_vv

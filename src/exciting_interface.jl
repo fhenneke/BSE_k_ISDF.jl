@@ -243,10 +243,10 @@ function optical_absorption_vector(prob::BSEProblemExciting, direction)
     return prob.pmat[:, direction] ./ ev
 end
 
-#TODO: maybe include this in the tests
-function read_reference(prob)
+#TODO: maybe include this in the tests? currently this code is not used
+function read_reference(prob, example_path)
     N_v, N_c, N_k = size(prob)
-    f = h5open(example_path * "bse_matrix.h5") #TODO: fix this: path is not known here!
+    f = h5open(example_path * "bse_matrix.h5")
 
     reordered_indices = vec(permutedims(reshape(1:(N_c * N_v * N_k), N_c, N_v, N_k), [2, 1, 3]))
 
