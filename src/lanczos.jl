@@ -27,7 +27,7 @@ function lanczos(A, u_init, k, M = I)
     U[:, 2] .= u
     v_old .= v
     v .= y ./ β[1]
-    for j in 2:k
+    @showprogress 1 "Lanczos iteration ..." for j in 2:k
         x .= A * v .- β[j - 1] .* u_old
         α[j] = real(v' * x)
         x .-= α[j] .* u
@@ -38,7 +38,6 @@ function lanczos(A, u_init, k, M = I)
         U[:, j + 1] .= u
         v_old .= v
         v .= y ./ β[j]
-        @info "Lanczos interation ..." progress = j / k
     end
     return α, β, U
 end
