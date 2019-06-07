@@ -231,9 +231,9 @@ for N_k in N_k_vec
     ev, ef = eigs(H, which=:SR, nev = 1, maxiter=1000)
 
     # save results
-    save("results_" * example_string * "/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
+    save("1d_old/optical_absorption_lanczos_$(N_unit)_$(N_k)_$(N_iter).jld2", "Erange", Erange, "optical_absorption_lanc", optical_absorption_lanc)
 
-    save("results_" * example_string * "/eigs_$(N_unit)_$(N_k).jld2", "ev", ev, "ef", ef)
+    save("1d_old/eigs_$(N_unit)_$(N_k).jld2", "ev", ev, "ef", ef)
 end
 
 # %% compute absorption spectra for different N_μ
