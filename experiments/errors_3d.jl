@@ -102,7 +102,7 @@ N_μ_vec, errors_Z_vv, errors_Z_cc, errors_Z_vc =  load(example_path * "/errors_
 N_iter = 200
 
 #variable parameters
-Z_tol_vec = [0.5, 0.2, 0.1]# [0.01] for graphene
+Z_tol_vec = [0.5, 0.2, 0.1, 0.05] # [0.5, 0.2, 0.1, 0.05, 0.02, 0.01] for graphene
 
 # compute spectra
 for Z_tol in Z_tol_vec
@@ -170,11 +170,12 @@ close(f)
 Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
 
 N_iter = 200
+Z_tol_vec = [0.5, 0.2, 0.1, 0.05] # [0.5, 0.2, 0.1, 0.05, 0.02, 0.01] for graphene
 
 errors_optical_absorption = []
-errors_ground_state_energy = []
+errors_ground_state_energy_abs = []
+errors_ground_state_energy_rel = []
 for Z_tol in Z_tol_vec
-    # save results
     absorption = load(example_path * "/optical_absorption_$(Z_tol)_$(N_iter).jld2", "absorption")
 
     error_optical_absorption = norm(absorption - absorption_reference[:, 1], 1) / norm(absorption_reference[:, 1], 1)
@@ -182,7 +183,8 @@ for Z_tol in Z_tol_vec
 
     eigenvalues = load(example_path * "/eigs_$(Z_tol).jld2", "eigenvalues")
 
-    push!(errors_ground_state_energy, abs(eigenvalues[1] - eigenvalue_reference))
+    push!(errors_ground_state_energy_abs, abs(eigenvalues[1] - eigenvalue_reference))
+    push!(errors_ground_state_energy_rel, abs(eigenvalues[1] - eigenvalue_reference) / eigenvalue_reference)
 end
 
-save(example_path * "/errors_spectrum.jld2", "Z_tol_vec", Z_tol_vec,  "errors_optical_absorption", errors_optical_absorption, "errors_ground_state_energy", errors_ground_state_energy)
+save(example_path * "/errors_spectrum.jld2", "Z_tol_vec", Z_tol_vec,  "errors_optical_absorption", errors_optical_absorption, "errors_ground_state_energy_abs", errors_ground_state_energy_abs, "errors_ground_state_energy_rel", errors_ground_state_energy_rel)
