@@ -25,7 +25,7 @@ should run the code to compute errors, benchmarks, and figures for the example i
 
 For the three-dimensional examples, additional input files have to be obtained. This can be done in two ways.
 
-1.  Download the additional files from (include link here; ~11 GB) and add them to the `examples` folder.
+1.  Download the additional files from ([example_data.zip](https://box.fu-berlin.de/s/ZEJW6w6HbzW67Sz); ~11 GB) and add them to the `examples` folder.
 2.  Generate the input files using the electronic structure code __exciting__ (add link) using the provided input files. It should be noted that some of the computations require multiple thousands of CPU hours. The version of exciting used to generate the date for the article was in development at the time of submission and has git hash (add hash of commit). The features used are expected to be included in the next major release of the __exciting__ software.
 
 The diamond example can then be run using the commands
