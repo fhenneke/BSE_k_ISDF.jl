@@ -9,6 +9,8 @@ BLAS.set_num_threads(1)
 FFTW.set_num_threads(1)
 
 # general problem setup
+isdir("1d") || mkdir("1d")
+
 l = 1.5
 V_sp = r -> 20 * cos(4π / l * r) + 0.2 * sin(2π / l * r)
 
