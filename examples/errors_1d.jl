@@ -215,13 +215,13 @@ N_k_vec = 2 .^(4:10)
 
 for N_k in N_k_vec
     sp_prob = BSE_k_ISDF.SPProblem1D(V_sp, l, N_unit, N_k)
-    prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V, W)
+    prob = BSE_k_ISDF.BSEProblem1D(sp_prob, N_core, N_v, N_c, V_func, W_func)
 
     isdf = BSE_k_ISDF.ISDF(prob, N_μ_vv, N_μ_cc, N_μ_vc)
 
     H = BSE_k_ISDF.setup_H(prob, isdf)
 
-    optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, N_iter, ω -> g(ω, σ), Erange)
+    optical_absorption_lanc = BSE_k_ISDF.lanczos_optical_absorption(prob, isdf, 1, N_iter, ω -> g(ω, σ), Erange)
     ev, ef = eigs(H, which=:SR, nev = 1, maxiter=1000)
 
     # save results
