@@ -100,9 +100,6 @@ git-tree-sha1 = "c94b0787956629036fb2b20fccde9e52b89d079a"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 version = "1.0.5"
 
-[[FileWatching]]
-uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
-
 [[HDF5]]
 deps = ["BinDeps", "Blosc", "CRC32c", "Distributed", "Homebrew", "Libdl", "LinearAlgebra", "Mmap", "Pkg", "Test", "WinRPM"]
 git-tree-sha1 = "dd83e1e9c72e44e3a156438b552cf75dbdda722f"
@@ -226,12 +223,6 @@ deps = ["Pkg"]
 git-tree-sha1 = "7b1d07f411bc8ddb7977ec7f377b97b158514fe0"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "0.2.0"
-
-[[Revise]]
-deps = ["Distributed", "FileWatching", "InteractiveUtils", "LibGit2", "OrderedCollections", "Pkg", "REPL", "Random", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "341be2df64de382559e2cc307e02ed4192f8a8b7"
-uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "1.0.2"
 
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"

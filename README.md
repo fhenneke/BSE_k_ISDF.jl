@@ -15,13 +15,22 @@ The tests can then be run using
     ]test BSE_k_ISDF
 ```
 
+To run the examples, you need to install additional dependencies via
+```julia
+    ]add BenchmarkTools JLD2 FilIO LinearAlgebra FFTW Statistics Arpack
+```
+
 The one-dimensional examples is self-contained and can be run from within the folder `examples`. The three commands
 ```julia
     include("errors_1d.jl")
     include("benchmarks_1d.jl")
+```
+should run the code to compute errors and benchmarks.
+
+To produce the figures from the article you additionally have to use the `PGFPlotsX` package. The figures are the created using the command
+```julia
     include("plotting_1d.jl")
 ```
-should run the code to compute errors, benchmarks, and figures for the example in the article.
 
 For the three-dimensional examples, additional input files have to be obtained. This can be done in two ways.
 
