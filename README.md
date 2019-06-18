@@ -17,7 +17,7 @@ The tests can then be run using
 
 To run the examples, you need to install additional dependencies via
 ```julia
-    ]add BenchmarkTools JLD2 FilIO FFTW Arpack
+    ]add BenchmarkTools JLD2 FileIO FFTW Arpack
 ```
 
 The one-dimensional examples is self-contained and can be run from within the folder `examples`. The three commands
