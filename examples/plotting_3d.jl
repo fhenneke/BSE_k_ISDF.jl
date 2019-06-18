@@ -21,7 +21,7 @@ Ha_to_eV = 27.211396641308
 Erange, absorption_reference = load("diamond/131313_20/optical_absorption_reference.jld2", "Erange", "absorption")
 
 Z_tol = 0.1
-N_iter = 200
+N_iter = 150
 absorption_isdf = load("diamond/131313_20/optical_absorption_$(Z_tol)_$(N_iter).jld2", "absorption")
 
 fig = @pgf Axis(
@@ -80,7 +80,7 @@ Ha_to_eV = 27.211396641308
 
 Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
 
-N_iter = 200
+N_iter = 150
 Z_tol_vec = [0.5, 0.1]
 optical_absorption_lanc = []
 for Z_tol in Z_tol_vec

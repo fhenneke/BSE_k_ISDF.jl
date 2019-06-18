@@ -127,7 +127,7 @@ save(example_path * "/optical_absorption_reference.jld2", "Erange", Erange, "abs
 σ = 0.0055 # 0.0036 for graphene
 g = ω -> 1 / π * σ / (ω^2 + σ^2)
 
-for N_iter in [50, 100, 200]
+for N_iter in [50, 100, 150, 200]
     for Z_tol in Z_tol_vec
         absorption = zeros(length(Erange))
         for direction in 1:3 # 1:2 for graphene
@@ -148,7 +148,7 @@ eigenvalue_reference = read(f["eigvec-singlet-TDA-BAR-full"]["0001"]["evals"])[1
 close(f)
 Erange, absorption_reference = load(example_path * "/optical_absorption_reference.jld2", "Erange", "absorption")
 
-N_iter = 200
+N_iter = 150
 Z_tol_vec = [0.5, 0.2, 0.1, 0.05] # [0.5, 0.2, 0.1, 0.05, 0.02, 0.01] for graphene
 
 errors_optical_absorption = []
