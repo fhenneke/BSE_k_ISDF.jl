@@ -126,7 +126,7 @@ absorption_reference[:, 3] = readdlm(example_path * "/EPSILON/EPSILON_BSE-single
 save(example_path * "/optical_absorption_reference.jld2", "Erange", Erange, "absorption", absorption_reference)
 
 # compute spectra from α and β
-σ = 0.0055
+σ = 0.0055 # broadening used in reference computation in exciting
 g = ω -> 1 / π * σ / (ω^2 + σ^2)
 
 for N_iter in [50, 100, 150, 200]
@@ -287,7 +287,7 @@ absorption_reference[:, 3] = readdlm(example_path * "/EPSILON/EPSILON_BSE-single
 save(example_path * "/optical_absorption_reference.jld2", "Erange", Erange, "absorption", absorption_reference)
 
 # compute spectra from α and β
-σ = 0.0036
+σ = 0.0036 # broadening used in reference computation in exciting
 g = ω -> 1 / π * σ / (ω^2 + σ^2)
 
 for N_iter in [50, 100, 150, 200]
