@@ -22,10 +22,10 @@ To run the examples, you need to install additional dependencies via
 
 The one-dimensional examples is self-contained and can be run from within the folder `examples`. The three commands
 ```julia
-    include("errors_1d.jl")
-    include("benchmarks_1d.jl")
+    include("benchmarks_1d.jl") # takes about  400 seconds
+    include("errors_1d.jl")     # takes about 4000 seconds
 ```
-should run the code to compute errors and benchmarks.
+should run the code to compute benchmarks and errors.
 
 To produce the figures from the article you additionally have to use the `PGFPlotsX` package. The figures are the created using the command
 ```julia
@@ -37,9 +37,9 @@ For the three-dimensional examples, additional input files have to be obtained. 
 1.  Download the additional files from ([example_data.zip](https://box.fu-berlin.de/s/bip6Mp5PBLozpqd); ~11 GB) and add them to the `examples` folder.
 2.  Generate the input files using the electronic structure code __exciting__ (add link) using the provided input files. It should be noted that some of the computations require multiple thousands of CPU hours. The version of exciting used to generate the date for the article was in development at the time of submission and has git hash (add hash of commit). The features used are expected to be included in the next major release of the __exciting__ software.
 
-The diamond example can then be run using the commands
+The diamond and graphene examples can then be run using the commands
 ```julia
+    include("benchmarks_3d.jl") # takes about 1200 seconds
     include("errors_3d.jl")
-    include("benchmarks_3d.jl")
     include("plotting_3d.jl")
 ```
