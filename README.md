@@ -39,7 +39,7 @@ For the three-dimensional examples, additional input files have to be obtained. 
 
 The diamond and graphene examples can then be run using the commands
 ```julia
-    include("benchmarks_3d.jl") # takes about 1200 seconds
-    include("errors_3d.jl")
+    include("benchmarks_3d.jl") # takes about  1200 seconds
+    include("errors_3d.jl")     $ takes about 40000 seconds
     include("plotting_3d.jl")
 ```
