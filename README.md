@@ -1,7 +1,10 @@
 # Interpolative Separable Density Fitting for the Bethe-Salpeter Equation
 
-The code in this repository was used in the the paper (add link to arxiv).
-The software is written in julia.
+The code in this repository was used in the the paper
+
+    F. Henneke, L. Lin, C. Vorwerk, C. Draxl, R. Klein, C. Yang, Fast optical absorption spectra calculations for periodic solid state systems, submitted
+
+see [arxiv](https://arxiv.org/abs/1907.02827) for a preprint. The software is written in julia.
 
 ## Documentation
 
